@@ -3,7 +3,7 @@
 @persist SPEED:number PRIZE:string COUNT:number
 @persist [BET, MULTIPLIER]:number PLAYER:entity
 
-#include "library/egp/2.0/init"
+#include "library/egp/1.0/init"
 
 if(first() || dupefinished()) {
     BET = 10000
