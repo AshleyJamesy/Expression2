@@ -1,0 +1,44 @@
+@persist TEAMS:table
+
+if(first() || dupefinished()) {
+    TEAMS = table()
+    
+    function string entity:teamName() {
+        return This:team():teamName()
+    }
+    
+    function string teamTitle(Team:number) {
+        local TeamName = Team:teamName():lower()
+        
+        local Teams = table(
+            "custom_thief" = "custom thief",
+            "custom_hitman" = "custom hitman",
+            "custom_police" = "custom police",
+            "custom_drug" = "custom drug dealer",
+            "custom_gun" = "custom gun dealer",
+            "custom_citizen" = "custom citizen"
+        )
+        
+        if(Teams:exists(TeamName:lower())) {
+            return Teams[TeamName:lower(), string]
+        }
+        
+        return TeamName
+    }
+    
+    function string number:teamTitle() {
+        return teamTitle(This)
+    }
+    
+    function string entity:teamTitle() {
+        return This:team():teamTitle()
+    }
+    
+    function number string:isTeamValid() {
+        return TEAMS:exists(This:lower())
+    }
+    
+    foreach(_:number, Team:number = teams()) {
+        TEAMS[Team:teamTitle():lower(), number] = Team
+    }
+}

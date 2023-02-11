@@ -1,0 +1,8 @@
+if(first() || dupefinished()) {
+    function string rgb2hex(Colour:vector) {
+        local R = min(max(Colour:x(), 0), 255)
+        local G = min(max(Colour:y(), 0), 255)
+        local B = min(max(Colour:z(), 0), 255)
+        return format("#%02x%02x%02x", R, G, B):upper()
+    }
+}

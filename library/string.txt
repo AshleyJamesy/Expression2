@@ -1,0 +1,40 @@
+if(first() || dupefinished()) {
+    function number string:startsWith(String:string) {
+        return This:left(String:length()) == String
+    }
+    
+    function number string:endsWith(String:string) {
+        return This:right(String:length()) == String
+    }
+    
+    function string string:comma() {
+        local Match = 
+            This:match("([-]?)(%d+)([.]?%d*)")
+        
+        return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
+    }
+    
+    function string number:comma() {
+        local Match = 
+            This:toString():match("([-]?)(%d+)([.]?%d*)")
+        
+        return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
+    }
+    
+    function string string:proper() { 
+        local Words = table()
+        
+        local String = This
+        foreach(_:number, Match:array = This:gmatch("(%l)(%w+)")) {
+            local Word = Match[1, string] + Match[2, string]
+            
+            if(!Words:exists(Word)) {
+                Words[Word, number] = 1
+                
+                String = String:replace(Word, Match[1, string]:upper() + Match[2, string]:lower())
+            }
+        }
+        
+        return String
+    }
+}

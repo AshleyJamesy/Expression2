@@ -1,0 +1,86 @@
+@name Camera Slave
+@inputs SCREEN:wirelink
+@persist M:entity C:entity MATERIALS:table [I, W, H, F, R, SX, SY, SW, SH]:number LIGHT:entity
+
+if(first() || dupefinished()) {
+    function vector ranger:doTrace() {
+        if(This:entity()) {
+            local Entity = This:entity()
+            if(Entity == LIGHT) {
+                 return LIGHT:getColor()
+            } else {
+                local D = (LIGHT:pos() - This:pos()):normalized():dot(This:hitNormal())
+                
+                if(D > 0) {
+                    return LIGHT:getColor() * D
+                } else {
+                    return vec(0,0,0)
+                }
+            }
+        } else {
+            if(This:hitSky()) {
+                return vec(100,255,255)
+            } elseif(This:hitWorld()) {
+                local Texture = This:hitTexture()
+                
+                if(MATERIALS:exists(Texture)) {
+                    return MATERIALS[Texture, vector] * (1 + (random(0.8, 1) - 0.5)) * (1 - This:fraction()) #add some noise to textures
+                }
+            }
+        }
+        
+        return vec(This:fraction() * 255) #depth
+    }
+}
+
+if(dsClk("capture")) {
+    local Job = dsGetTable()
+    
+    M = Job["master", entity]
+    C = Job["camera", entity]
+    W = Job["width", number]
+    H = Job["height", number]
+    F = Job["fov", number]
+    R = Job["range", number]
+    
+    MATERIALS = Job["materials", table]
+    
+    LIGHT = Job["light", entity]
+    
+    local Section = Job["section", table]
+    SX = Section["x", number]
+    SY = Section["y", number]
+    SW = Section["w", number]
+    SH = Section["h", number]
+    
+    rangerReset()
+    rangerPersist(1)
+    rangerIgnoreWorld(0)
+    rangerHitEntities(1)
+    rangerFilter(C)
+    
+    I = 0
+    
+    timer("capture", 0)
+}
+
+if(clk("capture")) {
+    while(I < SW * SH && perf(99)) {
+        local X = SX + floor(I / SW)
+        local Y = SY + floor(I % SW)
+        
+        local Direction = ang(-(F/2) + (Y/H) * F, -(F/2) + (X/W) * F, 0)
+        
+        local Pixel =
+            rangerOffset(R, C:pos(), C:forward():rotate(Direction)):doTrace()
+        
+        SCREEN[X + Y * W] = rgb2digi(Pixel, 3)
+        I++
+    }
+    
+    if(I < SW * SH) {
+        timer("capture", 0)
+    } else {
+        dsSendDirect("capture-done", M, entity()), stopAllTimers()
+    }
+}

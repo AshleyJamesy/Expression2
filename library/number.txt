@@ -1,0 +1,15 @@
+if(first() || dupefinished()) {
+    function number roundNearest(Value:number, Nearest:number) {
+        if (Nearest == 0) {
+            return Value
+        }
+        
+        local Remainder = Value % Nearest
+        
+        if (Remainder == 0) {
+            return Value
+        }
+        
+        return Value + Nearest - Remainder
+    }
+}

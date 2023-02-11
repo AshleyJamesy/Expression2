@@ -1,0 +1,46 @@
+@inputs EGP_SCREEN:wirelink EGP_USER:entity
+
+if(first() || dupefinished()) {
+    function void egpWire() {
+        findIncludePlayerProps(owner())
+        findByClass("gmod_wire_egp*")
+        findSortByDistance(entity():pos())
+        
+        if(find()) {   
+            if(find():owner() == owner()) {
+                if(!EGP_SCREEN:entity()) {
+                    #ifdef entity:createWire(entity, string, string)
+                    
+                    local EGP = find()
+                    entity():createWire(EGP, "EGP_SCREEN", "wirelink")
+                    entity():createWire(EGP, "EGP_USER", "User")
+                    
+                    #endif
+                }
+            }
+        }
+        
+        EGP_SCREEN:egpClear()
+        EGP_SCREEN:egpDrawTopLeft(1)
+    }
+    
+    function vector2 wirelink:egpPosChild(Id:number) {
+        local ParentId = This:egpParent(Id)
+        if(ParentId > 0) {
+            local Size = This:egpSize(ParentId) / 2
+            return This:egpPos(Id) + Size
+        } else {
+            return This:egpPos(Id)
+        }
+    }
+    
+    function void wirelink:egpPosChild(Id:number, Pos:vector2) {
+        local ParentId = This:egpParent(Id)
+        if(ParentId > 0) {
+            local Size = This:egpSize(ParentId) / 2
+            This:egpPos(Id, Pos - Size)
+        } else {
+            This:egpPos(Id, Pos)
+        }
+    }
+}

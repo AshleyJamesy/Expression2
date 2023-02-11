@@ -1,0 +1,1273 @@
+@name Advanced Gunstore
+@inputs [Shipment01, Shipment02, Shipment03, Shipment04, Shipment05, Shipment06, Shipment07, Shipment08, Shipment09, Shipment10, Shipment11, Shipment12, Shipment13, Shipment14, Shipment15, Shipment16, Shipment17, Shipment18, Shipment19, Shipment20]:entity
+@outputs [User01, User02, User03, User04, User05, User06, User07, User08, User09, User10, User11, User12, User13, User14, User15, User16, User17, User18, User19, User20]:number
+@persist ROOT:table STORE:table SHIPMENTS:table CATEGORY:string TOTAL:number MONEYREQUEST:entity Blacklisted:table
+
+#include "library/egp/0.1/init"
+#include "projects/gunstore/items"
+
+if(first() || dupefinished()) {
+    function table sItems(Category:string) {
+        if(!STORE:exists("items")) {
+            STORE["items", table] = sStoreItems()
+        }
+        
+        return STORE["items", table][Category, table]
+    }
+    
+    function number sTax() {
+        if(!STORE:exists("items")) {
+            STORE["tax", number] = 0 
+        }
+        
+        return STORE["tax", number]
+    }
+    
+    function void sTax(Tax:number) {
+        STORE["tax", number] = Tax
+    }
+    
+    function table sCart() {
+        if(!STORE:exists("cart")) {
+            STORE["cart", table] = table()
+        }
+        
+        return STORE["cart", table]
+    }
+    
+    function number sItemAvailable(Item:table) {
+        return SHIPMENTS:exists(Item["name", string])
+    }
+    
+    function number sItemMaxInCart(Item:table) {
+        local ItemName = Item["name", string]
+        
+        if(sCart():exists(ItemName)) {
+            return sCart()[ItemName, table]["amount", number] >= (Item["max", number] > 0 ? Item["max", number] : 10)
+        }
+        
+        return 0
+    }
+    
+    function number sItemPrice(Item:table) {
+        local Price = roundNearest(Item["price", number] * 2, 500)
+        if(Price > 10000) {
+            Price = roundNearest(Price, 1000)
+        }
+        return Price
+    }
+    
+    function number sCartTotal() {
+        local Total = 0
+        foreach(Name:string, Product:table = sCart()) {
+            Total = Total + Product["amount", number]
+        }
+        return Total
+    }
+    
+    function void sCartRefreshTotal() {
+        local Total = sCartTotal()
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementTabContent = ElementContent:dGetChild("tab-content")
+        local ElementTabCart = ElementTabContent:dGetChild("tab-cart")
+        local ElementText = ElementTabCart:dGetChild("text")
+        ElementText["text", string] = "CART(" + Total + ")"
+        dQueue(ElementText)
+    }
+    
+    function void table:sItem(Item:table) {
+        local ItemName = Item["name", string]
+        local ItemAvailable = sItemAvailable(Item)
+        local MaxInCart = sItemMaxInCart(Item)
+        local Price = sItemPrice(Item)
+        
+        #data:
+        This["data", table] = Item
+        
+        #label:
+        local ElementLabel = This:dGetChild("label")
+        ElementLabel["text", string] = ItemName:length() > 15 ? ItemName:left(15):trim() + "..." : ItemName
+        ElementLabel["colour", vector4] = !ItemAvailable ? vec4(100,100,100,255) : vec4(255,255,255,255)
+        
+        #price:
+        local ElementPrice = This:dGetChild("price")
+        ElementPrice["text", string] = "$" + Price:toString():comma()
+        ElementPrice["colour", vector4] = !ItemAvailable ? vec4(100,100,100,255) : vec4(50,200,50,255)
+        
+        #button:
+        local ElementButton = This:dGetChild("item-button")
+        ElementButton["colour", vector4] = !ItemAvailable ? vec4(200,50,50,255) : MaxInCart ? vec4(255,170,0,255) : vec4(50,200,50,255)
+        
+        #button, label:
+        local ElementButtonLabel = ElementButton:dGetChild("text")
+        ElementButtonLabel["text", string] = !ItemAvailable ? "Out of stock" : MaxInCart ? "Max In Cart" : "Add to Cart"
+        ElementButtonLabel["colour", vector4] = !ItemAvailable ? vec4(138, 30, 30, 255) : MaxInCart ? vec4(255, 255, 255, 255) : vec4(194, 255, 207, 255)
+        
+        dQueue(This)
+    }
+    
+    function void table:sCartItem(Item:table) {
+        local ItemName = Item["name", string]
+        local ItemAvailable = sItemAvailable(Item)
+        local MaxInCart = sItemMaxInCart(Item)
+        local Price = sItemPrice(Item)
+        
+        local Product = sCart()[ItemName, table]
+        local Amount = Product["amount", number]
+        
+        #data:
+        This["data", table] = Item
+        
+        #label:
+        local ElementLabel = This:dGetChild("label")
+        ElementLabel["text", string] = ItemName:length() > 15 ? ItemName:left(15):trim() + "..." : ItemName
+        
+        #price:
+        local ElementPrice = This:dGetChild("price")
+        ElementPrice["text", string] = "$" + (Price * Amount):toString():comma()
+        
+        #amount:
+        local ElementAmount = This:dGetChild("amount")
+        ElementAmount["text", string] = "x" + Amount
+        
+        dQueue(This)
+    }
+    
+    function void sScroll() {
+        #update position of scroll
+        local Position = dEventUserCursor()
+        
+        local ElementScrollBar = dEventTarget()
+        local ScrollBarSize = EGP_SCREEN:egpSize(ElementScrollBar:dId())
+        
+        local ElementScrollBarButton = dEventTarget():dGetChild("scroll-button")
+        local ButtonSize = EGP_SCREEN:egpSize(ElementScrollBarButton:dId())
+        
+        local Y = clamp(Position:y() - ButtonSize:y(), 0, ScrollBarSize:y() - ButtonSize:y())
+        
+        ElementScrollBarButton["position", table] = table(
+            "x" = 0,
+            "y" = Y
+        )
+        dQueue(ElementScrollBarButton)
+        
+        if(CATEGORY == "cart") {
+            local Cart = sCart()
+            local Items = Cart:keys()
+            
+            #update the items in the list
+            if(Items:count() > 7) {
+                local ElementContent = ROOT:dGetChild("content")
+                local ElementMainContent = ElementContent:dGetChild("main-content")
+                local ElementItemContent = ElementMainContent:dGetChild("container-items")
+                
+                local Children = ElementItemContent:dChildren()
+                for(I = 1, 7) {
+                    local ItemName = Items[I + floor(Y / 40.2) + 1, string]
+                    local Item = Cart[ItemName, table]["item", table]
+                    local ElementItem = Children[I, table]
+                    ElementItem:sCartItem(Item)
+                }
+            }
+        } else {
+            local Items = STORE["items", table][CATEGORY, table]
+            
+            #update the items in the list
+            if(Items:count() > 11) {
+                local ElementContent = ROOT:dGetChild("content")
+                local ElementMainContent = ElementContent:dGetChild("main-content")
+                local ElementItemContent = ElementMainContent:dGetChild("container-items")
+                
+                local Children = ElementItemContent:dChildren()
+                for(I = 1, 11) {
+                    local Item = Items[I + floor(Y / 40.2) + 1, table]
+                    local ElementItem = Children[I, table]
+                    ElementItem:sItem(Item)
+                }
+            }
+        }
+    }
+    
+    #TODO: size + refresh scroll bar on cart tab
+    #TODO: purchase + clear button
+    function void sChangeTab(Name:string, Number:number) {
+        if(CATEGORY == Name:right(Name:length() - "tab-":length()) && !Number) {
+            return
+        }
+        
+        if(!Number) {
+            soundPlay(eventClkName(), 0.1, "buttons/lightswitch2.wav")
+        }
+        
+        CATEGORY = Name:right(Name:length() - "tab-":length())
+        
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementTabContent = ElementContent:dGetChild("tab-content")
+        local ElementMainContent = ElementContent:dGetChild("main-content")
+        local ElementItemContent = ElementMainContent:dGetChild("container-items")
+        ElementItemContent:dRemoveChildren()
+        
+        local ElementScrollContainer = ElementMainContent:dGetChild("container-scroll")
+        local ElementScrollBar = ElementScrollContainer:dGetChild("scroll-bar")
+        local ElementScrollButton = ElementScrollBar:dGetChild("scroll-button")
+        
+        #select colour
+        foreach(K:number, ElementTab:table = ElementTabContent:dChildren()) {
+            if(ElementTab:dName() == Name) {
+                if(ElementTab:dName() == "tab-cart") {
+                    ElementTab["colour", vector4] = vec4(150,100,0,255)
+                } else {
+                    try {
+                        local ElementTabIcon = ElementTab:dGetChild("icon")
+                        ElementTabIcon["colour", vector4] = vec4(255,255,255,255)
+                        EGP_SCREEN:egpColor(ElementTabIcon:dId(), ElementTabIcon["colour", vector4])
+                        
+                        local ElementTabText = ElementTab:dGetChild("text")
+                        ElementTabText["colour", vector4] = vec4(255,255,255,255)
+                        EGP_SCREEN:egpColor(ElementTabText:dId(), ElementTabText["colour", vector4])
+                    } catch(Exception) {}
+                    
+                    ElementTab["colour", vector4] = vec4(30,30,30,255)
+                }
+            } else {
+                if(ElementTab:dName() == "tab-cart") {
+                    ElementTab["colour", vector4] = vec4(217,148,0,255)
+                } else {
+                    try {
+                        local ElementTabIcon = ElementTab:dGetChild("icon")
+                        ElementTabIcon["colour", vector4] = vec4(120,120,120,255)
+                        EGP_SCREEN:egpColor(ElementTabIcon:dId(), ElementTabIcon["colour", vector4])
+                        
+                        local ElementTabText = ElementTab:dGetChild("text")
+                        ElementTabText["colour", vector4] = vec4(120,120,120,255)
+                        EGP_SCREEN:egpColor(ElementTabText:dId(), ElementTabText["colour", vector4])
+                    } catch(Exception) {}
+                    
+                    ElementTab["colour", vector4] = K % 2 == 0 ? vec4(45,45,45,255) : vec4(55,55,55,255)
+                }
+            }
+            EGP_SCREEN:egpColor(ElementTab:dId(), ElementTab["colour", vector4])
+        }
+        
+        if(CATEGORY == "cart") {
+            local Cart = sCart()
+            local Items = Cart:keys()
+            
+            #scroll bar size
+            ElementScrollBar["size", table] = table(
+                "width" = "80%", "height" = "60%"
+            )
+            
+            local Position = ElementScrollButton["position", table]
+            Position["x", number] = 0
+            Position["y", number] = 0
+            local Percent = max(min(1, (1 - ((1/7) * (Items:count() - 7)))) * 100, 15)
+            ElementScrollButton["size", table]["height", string] = format("%0.2f%%", Percent)
+            
+            if(Percent == 100) {
+                ElementScrollButton["disabled", number] = 1
+                ElementScrollButton["colour", vector4] = vec4(40,40,40,255)
+            } else {
+                ElementScrollButton["disabled", number] = 0
+                ElementScrollButton["colour", vector4] = vec4(87,13,248,255)
+            }
+            dQueue(ElementScrollBar)
+            
+            local CheckoutId = 0
+            try {
+                CheckoutId = ElementMainContent:dGetChild("checkout"):dId()
+            } catch(Exception) {}
+            
+            if(CheckoutId == 0) {
+                ElementMainContent["children", table]:pushTable(
+                    table(
+                        "type" = "box",
+                        "name" = "checkout",
+                        "position" = table(
+                            "x" = 0,
+                            "y" = "65%"
+                        ),
+                        "size" = table(
+                            "width" = "100%", "height" = "35%"
+                        ),
+                        "children" = table(
+                            table(
+                                "type" = "box",
+                                "position" = table(
+                                    "x" = "3%",
+                                    "y" = 0
+                                ),
+                                "size" = table(
+                                    "width" = "94%",
+                                    "height" = 2
+                                ),
+                                "colour" = vec4(100,100,100,255)
+                            ),
+                            table(
+                                "type" = "text",
+                                "position" = table(
+                                    "x" = "3%",
+                                    "y" = "5%"
+                                ),
+                                "size" = table(
+                                    "width" = "75",
+                                    "height" = "25"
+                                ),
+                                "colour" = vec4(255,255,255,255),
+                                "text" = "Subtotal:"
+                            ),
+                            table(
+                                "type" = "text",
+                                "name" = "subtotal",
+                                "position" = table(
+                                    "x" = "25%",
+                                    "y" = "5%"
+                                ),
+                                "size" = table(
+                                    "width" = "150",
+                                    "height" = "25"
+                                ),
+                                "colour" = vec4(255,255,255,255),
+                                "text" = "$" + TOTAL:toString():comma(),
+                                "align" = vec2(2, 0)
+                            ),
+                            table(
+                                "type" = "text",
+                                "position" = table(
+                                    "x" = "3%",
+                                    "y" = "20%"
+                                ),
+                                "size" = table(
+                                    "width" = "75",
+                                    "height" = "25"
+                                ),
+                                "colour" = vec4(255,255,255,255),
+                                "text" = "Tax:"
+                            ),
+                            table(
+                                "type" = "text",
+                                "name" = "tax",
+                                "position" = table(
+                                    "x" = "25%",
+                                    "y" = "20%"
+                                ),
+                                "size" = table(
+                                    "width" = "150",
+                                    "height" = "25"
+                                ),
+                                "colour" = vec4(255,255,255,255),
+                                "text" = (sTax() * 100) + "%",
+                                "align" = vec2(2, 0)
+                            ),
+                            table(
+                                "type" = "text",
+                                "position" = table(
+                                    "x" = "3%",
+                                    "y" = "35%"
+                                ),
+                                "size" = table(
+                                    "width" = "75",
+                                    "height" = "25"
+                                ),
+                                "colour" = vec4(255,255,255,255),
+                                "text" = "Total:"
+                            ),
+                            table(
+                                "type" = "text",
+                                "name" = "total",
+                                "position" = table(
+                                    "x" = "25%",
+                                    "y" = "35%"
+                                ),
+                                "size" = table(
+                                    "width" = "150",
+                                    "height" = "25"
+                                ),
+                                "colour" = vec4(255,255,255,255),
+                                "text" = "$" + (TOTAL * (1 + sTax())):toString():comma(),
+                                "align" = vec2(2, 0)
+                            ),
+                            table(
+                                "type" = "box",
+                                "name" = "checkout-button",
+                                "position" = table(
+                                    "x" = "3%",
+                                    "y" = "55%"
+                                ),
+                                "size" = table(
+                                    "width" = "240",
+                                    "height" = "60"
+                                ),
+                                "events" = table(
+                                    "press" = 1
+                                ),
+                                "radius" = 1,
+                                "colour" = vec4(50,200,50,255),
+                                "children" = table(
+                                    table(
+                                        "type" = "text",
+                                        "name" = "text",
+                                        "text" = "Checkout",
+                                        "font" = table(
+                                            "font" = "",
+                                            "size" = 17
+                                        ),
+                                        "align" = vec2(1, 1),
+                                        "colour" = vec4(194, 255, 207, 255)
+                                    )
+                                )
+                            ),
+                            table(
+                                "type" = "box",
+                                "name" = "checkout-trash",
+                                "position" = table(
+                                    "x" = "76%",
+                                    "y" = "55%"
+                                ),
+                                "size" = table(
+                                    "width" = "70",
+                                    "height" = "60"
+                                ),
+                                "events" = table(
+                                    "press" = 1
+                                ),
+                                "radius" = 1,
+                                "colour" = vec4(200,50,50,255),
+                                "children" = table(
+                                    table(
+                                        "type" = "text",
+                                        "name" = "text",
+                                        "text" = "Trash",
+                                        "font" = table(
+                                            "font" = "",
+                                            "size" = 17
+                                        ),
+                                        "align" = vec2(1, 1),
+                                        "colour" = vec4(138, 30, 30, 255)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+                
+                dQueue(ElementMainContent)
+            } else {
+                local ElementCheckout = ElementMainContent:dGetChild("checkout")
+                local ElementSubTotal = ElementCheckout:dGetChild("subtotal")
+                local ElementTotal = ElementCheckout:dGetChild("total")
+                
+                ElementSubTotal["text", string] = "$" + TOTAL:toString():comma()
+                ElementTotal["text", string] = "$" + (TOTAL * (1 + sTax())):toString():comma()
+                dQueue(ElementSubTotal)
+                dQueue(ElementTotal)
+            }
+            
+            for(I = 1, min(Items:count(), 7)) {
+                local ItemName = Items[I, string]
+                local Product = Cart[ItemName, table]
+                local Item = Product["item", table]
+                local Amount = Product["amount", number]
+                local Price = sItemPrice(Item)
+                
+                local Label = Name:length() > 17 ? (Name:sub(1, 17) + "...") : Name
+                
+                ElementItemContent["children", table]:pushTable(
+                    table(
+                        "type" = "box",
+                        "data" = Item,
+                        "position" = table(
+                            "x" = "2%",
+                            "y" = ((I - 1) * 32 + (I * 8)) + 5
+                        ),
+                        "size" = table(
+                            "width" = "96%",
+                            "height" = 32
+                        ),
+                        "radius" = 1,
+                        "colour" = vec4(50,50,50,255),
+                        "children" = table(
+                            table(
+                                "type" = "text",
+                                "name" = "label",
+                                "position" = table(
+                                    "x" = "3%",
+                                    "y" = 0
+                                ),
+                                "size" = table(
+                                    "width" = "47%",
+                                    "height" = "100%"
+                                ),
+                                "text" = ItemName:length() > 15 ? ItemName:left(15):trim() + "..." : ItemName,
+                                "font" = table(
+                                    "font" = "",
+                                    "size" = 17
+                                ),
+                                "align" = vec2(0, 1),
+                                "colour" = vec4(255,255,255,255)
+                            ),
+                            table(
+                                "type" = "text",
+                                "name" = "price",
+                                "position" = table(
+                                    "x" = "50%",
+                                    "y" = 0
+                                ),
+                                "size" = table(
+                                    "width" = "20%",
+                                    "height" = "100%"
+                                ),
+                                "text" = "$" + (Price * Amount):toString():comma(),
+                                "font" = table(
+                                    "font" = "",
+                                    "size" = 17
+                                ),
+                                "align" = vec2(0, 1),
+                                "colour" = vec4(50,200,50,255)
+                            ),
+                            table(
+                                "type" = "text",
+                                "name" = "amount",
+                                "position" = table(
+                                    "x" = "70%",
+                                    "y" = 0
+                                ),
+                                "size" = table(
+                                    "width" = "10%",
+                                    "height" = "100%"
+                                ),
+                                "text" = "x" + Amount:toString(),
+                                "font" = table(
+                                    "font" = "",
+                                    "size" = 17
+                                ),
+                                "align" = vec2(0, 1),
+                                "colour" = vec4(255,255,255,255)
+                            ),
+                            table(
+                                "type" = "box",
+                                "name" = "cart-minus",
+                                "position" = table(
+                                    "x" = "81%",
+                                    "y" = 4
+                                ),
+                                "size" = table(
+                                    "width" = 25,
+                                    "height" = 25
+                                ),
+                                "events" = table(
+                                    "press" = 1
+                                ),
+                                "role" = "button",
+                                "radius" = 1,
+                                "colour" = vec4(255,50,50,255),
+                                "children" = table(
+                                    table(
+                                        "type" = "text",
+                                        "text" = "-",
+                                        "align" = vec2(1, 1),
+                                        "colour" = vec4(138, 30, 30, 255)
+                                    )
+                                )
+                            ),
+                            table(
+                                "type" = "box",
+                                "name" = "cart-remove",
+                                "position" = table(
+                                    "x" = "90%",
+                                    "y" = 4
+                                ),
+                                "size" = table(
+                                    "width" = 25,
+                                    "height" = 25
+                                ),
+                                "events" = table(
+                                    "press" = 1
+                                ),
+                                "role" = "button",
+                                "radius" = 1,
+                                "colour" = vec4(255,50,50,255),
+                                "children" = table(
+                                    table(
+                                        "type" = "text",
+                                        "text" = "x",
+                                        "align" = vec2(1, 1),
+                                        "colour" = vec4(138, 30, 30, 255)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            }
+        } else {
+            local Items = sItems(CATEGORY)
+            
+            #scroll bar size
+            ElementScrollBar["size", table] = table(
+                "width" = "80%", "height" = "94%"
+            )
+            
+            local Position = ElementScrollButton["position", table]
+            Position["x", number] = 0
+            Position["y", number] = 0
+            local Percent = max(min(1, (1 - ((1/11) * (Items:count() - 11)))) * 100, 15)
+            ElementScrollButton["size", table]["height", string] = format("%0.2f%%", Percent)
+            
+            if(Percent == 100) {
+                ElementScrollButton["disabled", number] = 1
+                ElementScrollButton["colour", vector4] = vec4(40,40,40,255)
+            } else {
+                ElementScrollButton["disabled", number] = 0
+                ElementScrollButton["colour", vector4] = vec4(87,13,248,255)
+            }
+            dQueue(ElementScrollBar)
+            
+            try {
+                ElementMainContent:dGetChild("checkout"):dRemove(3)
+            } catch(Exception) {}
+            
+            for(I = 1, min(Items:count(), 11)) {
+                local Item = Items[I, table]
+                local ItemName = Item["name", string]
+                local ItemAvailable = sItemAvailable(Item)
+                local MaxInCart = sItemMaxInCart(Item)
+                local Price = sItemPrice(Item)
+                
+                local ElementItem = table(
+                    "type" = "box",
+                    "data" = Item,
+                    "position" = table(
+                        "x" = "2%",
+                        "y" = ((I - 1) * 32 + (I * 8)) + 5
+                    ),
+                    "size" = table(
+                        "width" = "96%",
+                        "height" = 32
+                    ),
+                    "radius" = 1,
+                    "colour" = vec4(50,50,50,255),
+                    "children" = table(
+                        table(
+                            "type" = "text",
+                            "name" = "label",
+                            "position" = table(
+                                "x" = "3%",
+                                "y" = 0
+                            ),
+                            "size" = table(
+                                "width" = "47%",
+                                "height" = "100%"
+                            ),
+                            "text" = ItemName:length() > 15 ? ItemName:left(15):trim() + "..." : ItemName,
+                            "font" = table(
+                                "font" = "",
+                                "size" = 17
+                            ),
+                            "align" = vec2(0, 1),
+                            "colour" = !ItemAvailable ? vec4(100,100,100,255) : vec4(255,255,255,255)
+                        ),
+                        table(
+                            "type" = "text",
+                            "name" = "price",
+                            "position" = table(
+                                "x" = "50%",
+                                "y" = "0"
+                            ),
+                            "size" = table(
+                                "width" = "20%",
+                                "height" = "100%"
+                            ),
+                            "text" = "$" + Price:toString():comma(),
+                            "font" = table(
+                                "font" = "",
+                                "size" = 17
+                            ),
+                            "align" = vec2(0, 1),
+                            "colour" = !ItemAvailable ? vec4(100,100,100,255) : vec4(50,200,50,255)
+                        ),
+                        table(
+                            "type" = "box",
+                            "name" = "item-button",
+                            "position" = table(
+                                "x" = "70%",
+                                "y" = "4"
+                            ),
+                            "size" = table(
+                                "width" = "88",
+                                "height" = "25"
+                            ),
+                            "events" = table(
+                                "press" = 1
+                            ),
+                            "radius" = 1,
+                            "colour" = !ItemAvailable ? vec4(200,50,50,255) : MaxInCart ? vec4(255,170,0,255) : vec4(50,200,50,255),
+                            "children" = table(
+                                table(
+                                    "type" = "text",
+                                    "name" = "text",
+                                    "text" = !ItemAvailable ? "Out of stock" : MaxInCart ? "Max In Cart" : "Add to Cart",
+                                    "font" = table(
+                                        "font" = "",
+                                        "size" = 17
+                                    ),
+                                    "align" = vec2(1, 1),
+                                    "colour" = !ItemAvailable ? vec4(138, 30, 30, 255) : MaxInCart ? vec4(255, 255, 255, 255) : vec4(194, 255, 207, 255)
+                                )
+                            )
+                        )
+                    )
+                )
+                
+                ElementItemContent["children", table]:pushTable(ElementItem)
+            }
+        }
+        
+        dQueue(ElementItemContent)
+    }
+    
+    function void sCartAddItem() {
+        local Cart = sCart()
+        
+        local ElementItem = dEventTarget():dParent()
+        local Item = ElementItem["data", table]
+        local ItemName = Item["name", string]
+        local ItemAvailable = sItemAvailable(Item)
+        local MaxInCart = sItemMaxInCart(Item)
+        local Price = sItemPrice(Item)
+        
+        if(ItemAvailable) {
+            if(!Cart:exists(ItemName)) {
+                Cart[ItemName, table] = table("item" = Item, "amount" = 0)
+            }
+            
+            local Product = Cart[ItemName, table]
+            
+            if(!MaxInCart) {
+                Product["amount", number] = Product["amount", number] + 1
+                
+                TOTAL = TOTAL + Price
+                
+                soundPlay(eventClkName(), 0.1, "buttons/lightswitch2.wav")
+            }
+            
+            sCartRefreshTotal()
+        }
+        
+        ElementItem:sItem(Item)
+    }
+    
+    #TODO: refresh the list & scroll bar
+    function void sCartRemoveItem(All:number) {
+        soundPlay(eventClkName(), 0.1, "buttons/lightswitch2.wav")
+
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementTabContent = ElementContent:dGetChild("tab-content")
+        local ElementMainContent = ElementContent:dGetChild("main-content")
+        local ElementCheckout = ElementMainContent:dGetChild("checkout")
+        
+        local ElementSubTotal = ElementCheckout:dGetChild("subtotal")
+        local ElementTotal = ElementCheckout:dGetChild("total")
+        
+        local Target = dEventTarget()
+        local Item = Target:dParent()["data", table]
+        local ItemName = Item["name", string]
+        local Price = sItemPrice(Item)
+        
+        local Cart = sCart()
+
+        if(Cart:exists(ItemName)) {
+            local Product = Cart[ItemName, table]
+            if(Product["amount", number] > 1 && !All) {
+                Product["amount", number] = Product["amount", number] - 1
+                
+                TOTAL = TOTAL - Price
+                
+                local ElementAmountText = Target:dParent():dGetChild("amount")
+                ElementAmountText["text", string] = "x" + Product["amount", number]:toString()
+                dQueue(ElementAmountText)
+                
+                local ElementPriceText = Target:dParent():dGetChild("price")
+                ElementPriceText["text", string] = "$" + (Price * Product["amount", number]):toString()
+                dQueue(ElementPriceText)
+            } else {
+                Cart:removeTable(ItemName)
+                
+                TOTAL = TOTAL - Price * Product["amount", number]
+                
+                sChangeTab("tab-cart", 1)
+            }
+            
+            ElementSubTotal["text", string] = "$" + TOTAL:toString():comma()
+            ElementTotal["text", string] = "$" + (TOTAL * (1 + sTax())):toString():comma()
+            dQueue(ElementSubTotal)
+            dQueue(ElementTotal)
+        }
+        
+        sCartRefreshTotal()
+    }
+    
+    #MAIN
+    ROOT = table(
+        "type" = "box",
+        "name" = "root",
+        "colour" = vec4(61,68,81,255),
+        "children" = table(
+            table(
+                "type" = "box",
+                "size" = table(
+                    "width" = "100%", "height" = "10%"
+                ),
+                "colour" = vec4(87,13,248,255),
+                "children" = table(
+                    table(
+                        "type" = "text",
+                        "text" = "ADVANCED GUNSTORE",
+                        "align" = vec2(1, 1),
+                        "colour" = vec4(255,255,255,255)
+                    )
+                )
+            ),
+            table(
+                "type" = "box",
+                "name" = "content",
+                "size" = table(
+                    "width" = "100%", "height" = "90%"
+                ),
+                "position" = table(
+                    "x" = "0", "y" = "10%"
+                ),
+                "colour" = vec4(30,30,30,255),
+                "children" = table(
+                    table(
+                        "type" = "box",
+                        "name" = "tab-content",
+                        "size" = table(
+                            "width" = "33%",
+                            "height" = "100%"
+                        ),
+                        "colour" = vec4(45,45,45,255),
+                        "children" = table()
+                    ),
+                    table(
+                        "type" = "box",
+                        "name" = "main-content",
+                        "position" = table(
+                            "x" = "33%"
+                        ),
+                        "size" = table(
+                            "width" = "67%", "height" = "100%"
+                        ),
+                        "colour" = vec4(30,30,30,255),
+                        "children" = table(
+                            table(
+                                "type" = "box",
+                                "name" = "container-items",
+                                "size" = table(
+                                    "width" = "92%", "height" = "100%"
+                                )
+                            ),
+                            table(
+                                "type" = "box",
+                                "name" = "container-scroll",
+                                "position" = table(
+                                    "x" = "92%"
+                                ),
+                                "size" = table(
+                                    "width" = "8%", "height" = "100%"
+                                ),
+                                "children" = table(
+                                    table(
+                                        "type" = "box",
+                                        "name" = "scroll-bar",
+                                        "position" = table(
+                                            "x" = "2%",
+                                            "y" = "3%"
+                                        ),
+                                        "size" = table(
+                                            "width" = "80%", "height" = "94%"
+                                        ),
+                                        "radius" = 1,
+                                        "colour" = vec4(20,20,20,255),
+                                        "events" = table(
+                                            "press" = 1
+                                        ),
+                                        "children" = table(
+                                            table(
+                                                "type" = "box",
+                                                "name" = "scroll-button",
+                                                "size" = table(
+                                                    "width" = "100%", "height" = "100%"
+                                                ),
+                                                "radius" = 1,
+                                                "colour" = vec4(40,40,40,255)
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+    
+    #TABS
+    local TabContent = ROOT:dGetChild(2):dGetChild(1)
+    foreach(K:number, Category:table = sStoreCategories()) {
+        local Name = Category["name", string]
+        local Icon = Category["icon", string]
+        
+        TabContent:dChildren():pushTable(
+            table(
+                "type" = "box",
+                "name" = "tab-" + Name:lower(),
+                "size" = table(
+                    "width" = "100%",
+                    "height" = "6.95%"
+                ),
+                "position" = table(
+                    "x" = 0,
+                    "y" = format("%0.2f%%", (K - 1) * 6.95)
+                ),
+                "events" = table(
+                    "press" = 1
+                ),
+                "colour" = K % 2 == 0 ? vec4(45,45,45,255) : vec4(55,55,55,255),
+                "children" = table(
+                    table(
+                        "type" = "text",
+                        "text" = Name:upper() + "  ",
+                        "align" = vec2(2, 1),
+                        "position" = table(
+                            "x" = 0,
+                            "y" = 0
+                        ),
+                        "colour" = vec4(120,120,120,255)
+                    ),
+                    table(
+                        "type" = "text",
+                        "name" = "icon",
+                        "size" = table(
+                            "width" = 64,
+                            "height" = 64
+                        ),
+                        "position" = table(
+                            "x" = "5%",
+                            "y" = 5
+                        ),
+                        "text" = Icon,
+                        "font" = table(
+                            "font" = "csd",
+                            "size" = 42
+                        ),
+                        "colour" = vec4(120,120,120,255)
+                    )
+                )
+            )
+        )
+    }
+    
+    #CART
+    TabContent:dChildren():pushTable(
+        table(
+            "type" = "box",
+            "name" = "tab-cart",
+            "size" = table(
+                "width" = "100%",
+                "height" = "6.95%"
+            ),
+            "position" = table(
+                "x" = 0,
+                "y" = format("%0.2f%%", TabContent:dChildren():count() * 6.95)
+            ),
+            "events" = table(
+                "press" = 1
+            ),
+            "colour" = vec4(217,148,0,255),
+            "children" = table(
+                table(
+                    "type" = "text",
+                    "text" = "CART(0)",
+                    "align" = vec2(1, 1),
+                    "colour" = vec4(255,255,255,255)
+                )
+            )
+        )
+    )
+    
+    dQueue(ROOT)
+    
+    timer("shipments", 0)
+    timer("advertisement", 0)
+}
+
+#if(clk("advertisement")) {
+#    concmd("say \"/advert {*Gunstore} Fully Stocked in Town Square! {red Explosives}, {yellow Rifles}, {blue Armour}, {white Pistols}!\"")
+#    timer("advertisement", 60 * 1000)
+#}
+
+if(eventClk()) {
+    #tab was pressed
+    if(!dRendering() && !MONEYREQUEST:isPlayer()) {
+        if(eventClkName():match("tab-.+:press"):count() > 0) {
+            sChangeTab(dEventTarget():dName(), 0)
+        }
+        
+        if(eventClk("item-button:press")) {
+            sCartAddItem()
+        }
+        
+        if(eventClk("cart-minus:press")) {
+            sCartRemoveItem(0) #only remove x1
+        }
+        
+        if(eventClk("cart-remove:press")) {
+            sCartRemoveItem(1) #remove all
+        }
+        
+        if(eventClk("scroll-bar:press")) {
+            sScroll()
+        }
+        
+        if(eventClk("checkout-button:press")) {
+            local Cart = sCart()
+            if(Cart:count() > 0) {
+                if(moneyRequest(dEventUser(), TOTAL * (1 + sTax()), "Advanced Gunstore", 15) == 1) {
+                    MONEYREQUEST = dEventUser()
+                    local ElementContent = ROOT:dGetChild("content")
+                    local ElementMainContent = ElementContent:dGetChild("main-content")
+                    local ElementCheckout = ElementMainContent:dGetChild("checkout")
+                    local ElementCheckoutButton = ElementCheckout:dGetChild("checkout-button")
+                    local ElementCheckoutButtonText = ElementCheckoutButton:dGetChild("text")
+                    ElementCheckoutButtonText["text", string] = "Processing..."
+                    dQueue(ElementCheckoutButtonText)
+                } else {
+                    soundPlay("checkout-declined", 0.427, "buttons/weapon_cant_buy.wav")
+                }
+            }
+        }
+        
+        if(eventClk("checkout-trash:press")) {
+            local Cart = sCart()
+            if(Cart:count() > 0) {
+                soundPlay("checkout-trash", 0.616, "buttons/combine_button7.wav")
+                TOTAL = 0
+                Cart:clear()
+                sChangeTab("tab-cart", 1)
+                sCartRefreshTotal()
+            }
+        }
+    }
+}
+
+if(clk("shipments")) {
+    local Render = 0
+    
+    local AvailableShipments = table()
+    for(I = 1, 20) {
+        local Entity = ioGetInputEntity("Shipment" + format("%02d", I))
+        if(Entity:isValid()) {
+            if(Entity:isShipment()) {
+                local ShipmentName = Entity:shipmentName()
+                
+                #add missing shipment
+                if(!SHIPMENTS:exists(Entity:shipmentName())) {
+                    SHIPMENTS[Entity:shipmentName(), table] = table(
+                        "index" = I,
+                        "type" = Entity:shipmentType(),
+                        "class" = Entity:shipmentClass(),
+                        "amount" = Entity:shipmentAmount(),
+                        "total" = Entity:shipmentSize(),
+                        "price" = Entity:shipmentPrice()
+                    )
+                    
+                    Render = 1
+                } else {
+                    local Shipment = SHIPMENTS[Entity:shipmentName(), table]
+                    Shipment["index", number] = I
+                }
+                
+                AvailableShipments[ShipmentName, number] = 1
+            }
+        }
+    }
+    
+    #remove shipments which do not exist
+    foreach(ShipmentName:string, Item:table = SHIPMENTS) {
+        if(!AvailableShipments:exists(ShipmentName)) {
+            SHIPMENTS:removeTable(ShipmentName)
+            Render = 1
+        }
+    }
+    
+    if(Render) {
+        timer("render", 0)
+    }
+    
+    timer("shipments", 1000) #check in another second
+}
+
+if(clk("render")) {
+    if(!dRendering()) {
+        switch(CATEGORY) {
+            case "cart",
+            break
+            default,
+                local ElementContent = ROOT:dGetChild("content")
+                local ElementMainContent = ElementContent:dGetChild("main-content")
+                local ElementItemContent = ElementMainContent:dGetChild("container-items")
+                
+                foreach(K:number, ElementItem:table = ElementItemContent["children", table]) {
+                    local Item = ElementItem["data", table]
+                    ElementItem:sItem(Item)
+                }
+            break
+        }
+    } else {
+        timer("render", 1000) #keep trying until we can update the cart
+    }
+}
+
+if(moneyClk()) {
+    if(moneyClkTitle() == "Advanced Gunstore") {
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementMainContent = ElementContent:dGetChild("main-content")
+        local ElementCheckout = ElementMainContent:dGetChild("checkout")
+        local ElementCheckoutButton = ElementCheckout:dGetChild("checkout-button")
+        local ElementCheckoutButtonText = ElementCheckoutButton:dGetChild("text")
+        ElementCheckoutButtonText["text", string] = "Dispensing..."
+        dQueue(ElementCheckoutButtonText)
+        
+        timer("dispense", 0)
+    }
+}
+
+if(clk("dispense")) {
+    local ElementContent = ROOT:dGetChild("content")
+    local ElementMainContent = ElementContent:dGetChild("main-content")
+    
+    local Cart = sCart()
+    if(Cart:count() > 0) {
+        local Keys = Cart:keys()
+        
+        local ItemName = Keys[1, string]
+        local Product = Cart[ItemName, table]
+        if(Product["amount", number] > 0) {
+            ioSetOutput("User" + format("%02d", SHIPMENTS[ItemName, table]["index", number]), 1)
+            Product["amount", number] = Product["amount", number] - 1
+            timer("reset-users", 0)
+        }
+        
+        if(Product["amount", number] == 0) {
+            Cart:removeTable(Keys[1, string])
+        }
+        
+        soundPlay("dispense", 0.988, "buttons/button4.wav")
+        
+        sChangeTab("tab-cart", 1) #too lazy to update
+    }
+    
+    if(Cart:count() == 0) {
+        MONEYREQUEST = noentity()
+        
+        TOTAL = 0
+        
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementMainContent = ElementContent:dGetChild("main-content")
+        local ElementCheckout = ElementMainContent:dGetChild("checkout")
+        local ElementCheckoutButton = ElementCheckout:dGetChild("checkout-button")
+        local ElementCheckoutButtonText = ElementCheckoutButton:dGetChild("text")
+        ElementCheckoutButtonText["text", string] = "Checkout"
+        dQueue(ElementCheckoutButtonText)
+        
+        local ElementSubTotal = ElementCheckout:dGetChild("subtotal")
+        local ElementTotal = ElementCheckout:dGetChild("total")
+        ElementSubTotal["text", string] = "$" + TOTAL:toString():comma()
+        ElementTotal["text", string] = "$" + (TOTAL * (1 + sTax())):toString():comma()
+        dQueue(ElementSubTotal)
+        dQueue(ElementTotal)
+        
+        sCartRefreshTotal()
+        
+        soundPlay("dispense-done", 0.692, "common/stuck1.wav")
+    } else {
+        timer("dispense", 2000)
+    }
+}
+
+if(clk("reset-users")) {
+    for(I = 1, 20) {
+        ioSetOutput("User" + format("%02d", I), 0)
+    }
+}
+
+event chat(Player:entity, LastSaid:string, _:number) {
+    if(Player == owner()) {
+        local Arguments = LastSaid:replaceRE("%s+", " "):explode(" ")
+        
+        if(Arguments[1, string]:lower() == "!gunstore") {
+            local Command = Arguments[2, string]:lower()
+            
+            if(Player == owner()) {
+                hideChat(1)
+            }
+            
+            switch(Command) {
+                case "tax",
+                    sTax(Arguments[3, string]:toNumber())
+                    
+                    if(CATEGORY == "cart") {
+                        local ElementContent = ROOT:dGetChild("content")
+                        local ElementTabContent = ElementContent:dGetChild("tab-content")
+                        local ElementMainContent = ElementContent:dGetChild("main-content")
+                        local ElementCheckout = ElementMainContent:dGetChild("checkout")
+                        local ElementSubTotal = ElementCheckout:dGetChild("subtotal")
+                        local ElementTax = ElementCheckout:dGetChild("tax")
+                        local ElementTotal = ElementCheckout:dGetChild("total")
+                        ElementSubTotal["text", string] = "$" + TOTAL:toString():comma()
+                        ElementTax["text", string] = (sTax() * 100) + "%"
+                        ElementTotal["text", string] = "$" + (TOTAL * (1 + sTax())):toString():comma()
+                        dQueue(ElementSubTotal)
+                        dQueue(ElementTax)
+                        dQueue(ElementTotal)
+                    }
+                break
+                default,
+                    hideChat(0)
+                break
+            }
+        }
+    }
+}
+
+if(moneyNoClk()) {
+    if(moneyNoClkTitle() == "Advanced Gunstore") {
+        soundPlay("checkout-declined", 0.427, "buttons/weapon_cant_buy.wav")
+        MONEYREQUEST = noentity()
+    
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementMainContent = ElementContent:dGetChild("main-content")
+        local ElementCheckout = ElementMainContent:dGetChild("checkout")
+        local ElementCheckoutButton = ElementCheckout:dGetChild("checkout-button")
+        local ElementCheckoutButtonText = ElementCheckoutButton:dGetChild("text")
+        ElementCheckoutButtonText["text", string] = "Checkout"
+        dQueue(ElementCheckoutButtonText)
+    }
+}
+
+if(moneyTimeout()) {
+    if(moneyTimeoutTitle() == "Advanced Gunstore") {
+        soundPlay("checkout-declined", 0.427, "buttons/weapon_cant_buy.wav")
+        MONEYREQUEST = noentity()
+        
+        local ElementContent = ROOT:dGetChild("content")
+        local ElementMainContent = ElementContent:dGetChild("main-content")
+        local ElementCheckout = ElementMainContent:dGetChild("checkout")
+        local ElementCheckoutButton = ElementCheckout:dGetChild("checkout-button")
+        local ElementCheckoutButtonText = ElementCheckoutButton:dGetChild("text")
+        ElementCheckoutButtonText["text", string] = "Checkout"
+        dQueue(ElementCheckoutButtonText)
+    }
+}

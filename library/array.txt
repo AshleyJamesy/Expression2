@@ -1,0 +1,47 @@
+if(first() || dupefinished()) {
+    function array array:indexOf(Target:number) {
+        if(This:count() == 0) {
+            return array(0, 0)
+        }
+        
+        local I = 0
+        local V = 0
+        local L = 0
+        local H = This:count() - 1
+        
+        while(L <= H) {
+            I = floor((L + H) / 2)
+            
+            V = This[I + 1, number]
+            if(V < Target) {
+                L = I + 1
+            } elseif(V > Target) {
+                H = I - 1
+            } else {
+                return array(1, I + 1)
+            }
+        }
+        
+        return array(0, I + (V > Target ? 0 : 1))
+    }
+    
+    function number array:hasValue(String:string) {
+        foreach(_:number, Value:string = This) {
+            if(Value == String) {
+                return 1
+            }
+        }
+        
+        return 0
+    }
+    
+    function number array:hasValue(Entity:entity) {
+        foreach(_:number, Value:entity = This) {
+            if(Value == Entity) {
+                return 1
+            }
+        }
+        
+        return 0
+    }
+}

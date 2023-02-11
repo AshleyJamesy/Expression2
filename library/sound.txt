@@ -1,0 +1,11 @@
+if(first() || dupefinished()) {
+    function void soundRandom(T_SOUNDTABLE:table) {
+        local SOUND = T_SOUNDTABLE[randint(1, T_SOUNDTABLE:count()), table]
+        soundPlay(SOUND["path", string], SOUND["duration", number], SOUND["path", string])
+    }
+    
+    function void entity:soundRandom(T_SOUNDTABLE:table) {
+        local SOUND = T_SOUNDTABLE[randint(1, T_SOUNDTABLE:count()), table]
+        This:soundPlay(SOUND["path", string], SOUND["duration", number], SOUND["path", string])
+    }
+}

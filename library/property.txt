@@ -1,0 +1,68 @@
+if(first() || dupefinished()) {
+    function number table:dProperty(TypeIds:table, Name:string, Default:number, Remove:number) {
+        if(!Remove) {
+            if(!This:exists(Name) || TypeIds[Name, string] != "n") {
+                This[Name, number] = Default
+            }
+            
+            return This[Name, number]
+        }
+        
+        This:remove(Name)
+        return Default
+    }
+    
+    function string table:dProperty(TypeIds:table, Name:string, Default:string, Remove:number) {
+        if(!Remove) {
+            if(!This:exists(Name) || TypeIds[Name, string] != "s") {
+                This[Name, string] = Default
+            }
+            
+            return This[Name, string]
+        }
+        
+        This:remove(Name)
+        return Default
+    }
+    
+    function vector2 table:dProperty(TypeIds:table, Name:string, Default:vector2, Remove:number) {
+        if(!Remove) {
+            if(!This:exists(Name) || TypeIds[Name, string] != "xv2") {
+                This[Name, vector2] = Default
+            }
+            
+            return This[Name, vector2]
+        }
+        
+        This:remove(Name)
+        return Default
+    }
+    
+    function vector4 table:dProperty(TypeIds:table, Name:string, Default:vector4, Remove:number) {
+        if(!Remove) {
+            if(!This:exists(Name) || TypeIds[Name, string] != "xv4") {
+                This[Name, vector4] = Default
+            }
+            
+            return This[Name, vector4]
+        }
+        
+        This:remove(Name)
+        return Default
+    }
+    
+    function table table:dProperty(TypeIds:table, Name:string, Default:table, Remove:number) {
+        if(!Remove) {
+            if(!This:exists(Name) || TypeIds[Name, string] != "t") {
+                This[Name, table] = Default
+            } else {
+                This[Name, table] = This[Name, table]:intersect(Default)
+            }
+            
+            return This[Name, table]
+        }
+        
+        This:remove(Name)
+        return Default
+    }
+}

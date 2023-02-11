@@ -1,0 +1,388 @@
+@name Advanced Gunstore
+@inputs [USER01, USER02, USER03, USER04, USER05, USER06, USER07, USER08, USER09, USER10, USER11, USER12, USER13, USER14, USER15, USER16, USER17, USER18, USER19, USER20]:wirelink 
+@persist TAB:string
+
+#include "library/egp/2.0/init"
+#include "projects/gunstore/items"
+
+if(first() || dupefinished()) {
+    function table:dRefreshItem(Item:table) {
+        local ItemName = Item["name", string]
+        local Price = Item["price", number]
+        local Available = 0
+        local MaxInCart = 0
+        
+        local ElementName = This:dGetChild("label")
+        ElementName["text", string] = ItemName:length() > 15 ? ItemName:left(15):trim() + "..." : ItemName
+        ElementName["colour", vector4] = !Available ? vec4(100,100,100,255) : vec4(255,255,255,255)
+        
+        local ElementPrice = This:dGetChild("price")
+        ElementPrice["text", string] = "$" + Price:toString():comma()
+        ElementPrice["colour", vector4] = !Available ? vec4(100,100,100,255) : vec4(50,200,50,255)
+        
+        local ElementButton = This:dGetChild("button")
+        ElementButton["colour", vector4] = !Available ? vec4(200,50,50,255) : MaxInCart ? vec4(255,170,0,255) : vec4(50,200,50,255)
+        
+        local ElementButtonText = ElementButton:dGetChild("text")
+        ElementButtonText["text", string] = !Available ? "Out of stock" : MaxInCart ? "Max In Cart" : "Add to Cart"
+        ElementButtonText["colour", vector4] = !Available ? vec4(138, 30, 30, 255) : MaxInCart ? vec4(255, 255, 255, 255) : vec4(194, 255, 207, 255)
+    }
+    
+    function sChangeTab(Tab:string) {
+        if(TAB == Tab) {
+            return
+        }
+        TAB = Tab
+        
+        EGP_SCREEN:entity():soundPlay("tab-change", 0.1, "buttons/lightswitch2.wav")
+        soundVolume("tab-change", 0.5)
+        
+        foreach(K:number, ElementChild:table = dGetElement("body.content.tabs"):dChildren()) {
+            local Name = ElementChild:dName()
+            if(Name == TAB) {
+                if(Name == "cart") {
+                    ElementChild:dColour(vec4(150,100,0,255))
+                } else {
+                    ElementChild:dColour(vec4(30,30,30,255))
+                    ElementChild:dGetChild("text"):dColour(vec4(255, 255, 255, 255))
+                    ElementChild:dGetChild("icon"):dColour(vec4(255, 255, 255, 255))
+                }
+            } else {
+                if(Name == "cart") {
+                    ElementChild:dColour(vec4(217,148,0,255))
+                } else {
+                    ElementChild:dColour(K % 2 == 0 ? vec4(45, 45, 45, 255) : vec4(55, 55, 55, 255))
+                    ElementChild:dGetChild("text"):dColour(vec4(120, 120, 120, 255))
+                    ElementChild:dGetChild("icon"):dColour(vec4(120, 120, 120, 255))
+                }
+            }
+        }
+        
+        local Items = sStoreItems()[Tab, table]
+        
+        local ElementItems = dGetElement("body.content.main-content.container-items")
+        if(ElementItems:dChildren():count() > Items:count()) {
+            for(I = ElementItems:dChildren():count(), Items:count() + 1, -1) {
+                ElementItems:dGetChild(I):dDelete()
+            }
+        }
+        
+        for(I = 1, min(Items:count(), 11)) {
+            local Item = Items[I, table]
+            
+            if(I <= ElementItems:dChildren():count()) {
+                ElementItems:dGetChild(I):dRefreshItem(Item)
+            } else {
+                local ItemName = Item["name", string]
+                local Price = Item["price", number]
+                local Available = 0
+                local MaxInCart = 0
+                
+                local ElementItem = table(
+                    "type" = "box",
+                    "data" = Item,
+                    "position" = table(
+                        "x" = "2%",
+                        "y" = ((I - 1) * 32 + (I * 8)) + 5
+                    ),
+                    "size" = table(
+                        "width" = "96%",
+                        "height" = 32
+                    ),
+                    "rounded" = 1,
+                    "colour" = vec4(50,50,50,255),
+                    "children" = table(
+                        table(
+                            "type" = "text",
+                            "name" = "label",
+                            "position" = table(
+                                "x" = "3%",
+                                "y" = 0
+                            ),
+                            "size" = table(
+                                "width" = "47%",
+                                "height" = "100%"
+                            ),
+                            "text" = ItemName:length() > 15 ? ItemName:left(15):trim() + "..." : ItemName,
+                            "font" = table(
+                                "font" = "",
+                                "size" = 17
+                            ),
+                            "align" = vec2(0, 1),
+                            "colour" = !Available ? vec4(100,100,100,255) : vec4(255,255,255,255)
+                        ),
+                        table(
+                            "type" = "text",
+                            "name" = "price",
+                            "position" = table(
+                                "x" = "50%",
+                                "y" = "0"
+                            ),
+                            "size" = table(
+                                "width" = "20%",
+                                "height" = "100%"
+                            ),
+                            "text" = "$" + Price:toString():comma(),
+                            "font" = table(
+                                "font" = "",
+                                "size" = 17
+                            ),
+                            "align" = vec2(0, 1),
+                            "colour" = !Available ? vec4(100,100,100,255) : vec4(50,200,50,255)
+                        ),
+                        table(
+                            "type" = "box",
+                            "name" = "button",
+                            "position" = table(
+                                "x" = "70%",
+                                "y" = "4"
+                            ),
+                            "size" = table(
+                                "width" = "88",
+                                "height" = "25"
+                            ),
+                            "rounded" = 1,
+                            "colour" = !Available ? vec4(200,50,50,255) : MaxInCart ? vec4(255,170,0,255) : vec4(50,200,50,255),
+                            "children" = table(
+                                table(
+                                    "type" = "text",
+                                    "name" = "text",
+                                    "text" = !Available ? "Out of stock" : MaxInCart ? "Max In Cart" : "Add to Cart",
+                                    "font" = table(
+                                        "font" = "",
+                                        "size" = 17
+                                    ),
+                                    "align" = vec2(1, 1),
+                                    "colour" = !Available ? vec4(138, 30, 30, 255) : MaxInCart ? vec4(255, 255, 255, 255) : vec4(194, 255, 207, 255)
+                                )
+                            )
+                        )
+                    )
+                )
+                ElementItems:dChildren():pushTable(ElementItem)
+            }
+        }
+        
+        ElementItems:dDirty()
+    }
+}
+
+if(eEventClk("mouse.press")) {
+    local Event = eEventGetPayload()
+    local User = Event["user", entity]
+    local Cursor = Event["cursor", vector2]
+    
+    foreach(_:number, ElementChild:table = dGetElement("body.content.tabs"):dChildren()) {
+        if(inrange(Cursor, ElementChild:dPos(), ElementChild:dPos() + ElementChild:dSize())) {
+            sChangeTab(ElementChild:dName())
+            break
+        }
+    }
+}
+
+if(eEventClk("document.ready")) {
+    local Body = eEventGetPayload()
+    Body:dColour(vec4(0, 0, 0, 255))
+    
+    Body:dChildren():pushTable(
+        table(
+            "type" = "box",
+            "name" = "header",
+            "colour" = vec4(87, 13, 248, 255),
+            "size" = table(
+                "width" = "100%",
+                "height" = "10%"
+            ),
+            "children" = table(
+                table(
+                    "name" = "text",
+                    "type" = "text",
+                    "colour" = vec4(255, 255, 255, 255),
+                    "text" = "ADVANCED GUNSTORE",
+                    "font" = table(
+                        "font" = "ChatFont",
+                        "size" = 18
+                    ),
+                    "align" = vec2(1, 1)
+                )
+            )
+        )
+    )
+    
+    local TabContent = table(
+        "type" = "box",
+        "name" = "tabs",
+        "colour" = vec4(45, 45, 45, 255),
+        "size" = table(
+            "width" = "33%",
+            "height" = "100%"
+        ),
+        "children" = table()
+    )
+    
+    foreach(K:number, Category:table = sStoreCategories()) {
+        local Name = Category["name", string]
+        local Icon = Category["icon", string]
+        
+        TabContent:dChildren():pushTable(
+            table(
+                "type" = "box",
+                "name" = Name:lower(),
+                "colour" = K % 2 == 0 ? vec4(45, 45, 45, 255) : vec4(55, 55, 55, 255),
+                "size" = table(
+                    "width" = "100%",
+                    "height" = "6.95%"
+                ),
+                "position" = table(
+                    "x" = 0,
+                    "y" = format("%0.2f%%", (K - 1) * 6.95)
+                ),
+                "children" = table(
+                    table(
+                        "type" = "text",
+                        "name" = "text",
+                        "colour" = vec4(120, 120, 120, 255),
+                        "position" = table(
+                            "x" = 0,
+                            "y" = 0
+                        ),
+                        "text" = Name:upper() + "  ",
+                        "font" = table(
+                            "font" = "ChatFont",
+                            "size" = 18
+                        ),
+                        "align" = vec2(2, 1)
+                    ),
+                    table(
+                        "type" = "text",
+                        "name" = "icon",
+                        "colour" = vec4(120, 120, 120, 255),
+                        "size" = table(
+                            "width" = 64,
+                            "height" = 64
+                        ),
+                        "position" = table(
+                            "x" = "5%",
+                            "y" = 5
+                        ),
+                        "text" = Icon,
+                        "font" = table(
+                            "font" = "csd",
+                            "size" = 42
+                        )
+                    )
+                )
+            )
+        )
+    }
+    
+    TabContent:dChildren():pushTable(
+        table(
+            "type" = "box",
+            "name" = "cart",
+            "colour" = vec4(217, 148, 0, 255),
+            "size" = table(
+                "width" = "100%",
+                "height" = "6.95%"
+            ),
+            "position" = table(
+                "x" = 0,
+                "y" = format("%0.2f%%", TabContent:dChildren():count() * 6.95)
+            ),
+            "children" = table(
+                table(
+                    "type" = "text",
+                    "colour" = vec4(255, 255, 255, 255),
+                    "text" = "CART(0)",
+                    "font" = table(
+                        "font" = "ChatFont",
+                        "size" = 18
+                    ),
+                    "align" = vec2(1, 1)
+                )
+            )
+        )
+    )
+    
+    Body:dChildren():pushTable(
+        table(
+            "type" = "box",
+            "name" = "content",
+            "size" = table(
+                "width" = "100%",
+                "height" = "90%"
+            ),
+            "position" = table(
+                "x" = "0",
+                "y" = "10%"
+            ),
+            "colour" = vec4(30, 30, 30, 255),
+            "children" = table(
+                TabContent,
+                table(
+                    "type" = "box",
+                    "name" = "main-content",
+                    "position" = table(
+                        "x" = "33%",
+                        "y" = 0
+                    ),
+                    "size" = table(
+                        "width" = "67%",
+                        "height" = "100%"
+                    ),
+                    "colour" = vec4(30, 30, 30, 255),
+                    "children" = table(
+                        table(
+                            "type" = "box",
+                            "name" = "container-items",
+                            "size" = table(
+                                "width" = "92%",
+                                "height" = "100%"
+                            )
+                        ),
+                        table(
+                            "type" = "box",
+                            "name" = "container-scroll",
+                            "position" = table(
+                                "x" = "92%",
+                                "y" = 0
+                            ),
+                            "size" = table(
+                                "width" = "8%",
+                                "height" = "100%"
+                            ),
+                            "children" = table(
+                                table(
+                                    "type" = "box",
+                                    "name" = "scroll-bar",
+                                    "colour" = vec4(20, 20, 20, 255),
+                                    "position" = table(
+                                        "x" = "2%",
+                                        "y" = "3%"
+                                    ),
+                                    "size" = table(
+                                        "width" = "80%",
+                                        "height" = "94%"
+                                    ),
+                                    "rounded" = 1,
+                                    "children" = table(
+                                        table(
+                                            "type" = "box",
+                                            "name" = "scroll-button",
+                                            "colour" = vec4(40, 40, 40, 255),
+                                            "size" = table(
+                                                "width" = "100%",
+                                                "height" = "100%"
+                                            ),
+                                            "rounded" = 1
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+}

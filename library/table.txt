@@ -1,0 +1,9 @@
+@persist NO_TABLE:table
+
+if(first() || dupefinished()) {
+    NO_TABLE = table()
+    
+    function table notable() {
+        return NO_TABLE
+    }
+}

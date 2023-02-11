@@ -1,0 +1,473 @@
+@name Door & Alarm System v2
+@inputs DURATION:number TRIGGER1:array TRIGGER2:array TRIGGER3:array TRIGGER4:array
+@outputs DOOR1:number DOOR2:number DOOR3:number DOOR4:number
+@outputs STRANGER:number
+@persist MANAGERS:table
+@persist PLAYER_WHITELIST:table TEAM_WHITELIST:table STANGERS:table
+
+#include "library/number"
+#include "library/string"
+#include "library/colour"
+#include "library/ulx"
+#include "library/team"
+
+if(first() || dupefinished()) {
+    MANAGERS = table()
+    PLAYER_WHITELIST = table()
+    TEAM_WHITELIST = table()
+    
+    function void entity:message(Message:string, NoHeader:number) {
+        This:ulxSendPrivateMessage((NoHeader ? "" : "{yellow Door System:} ") + Message)
+    }
+    
+    function void entity:message(Message:string) {
+        This:message(Message, 0)
+    }
+    
+    function void entity:handleError(Exception:string) {
+        This:message("{red " + Exception + "}")
+        
+        if(This == owner()) {
+            owner():soundPlay("buttons/button16.wav", 0.056, "buttons/button16.wav")
+            soundVolume("buttons/button16.wav", 0.25)
+        }
+    }
+    
+    function number string:isTeamValid() {
+        foreach(_:number, TeamName:string = TEAMS) {
+            if(This == TeamName) {
+                return 1
+            }
+        }
+        
+        return 0
+    }
+    
+    function number entity:isManager() {
+        if(This:isValid() && This:isPlayer()) {
+            return This == owner() || MANAGERS:exists(This:steamID())
+        }
+        return 0
+    }
+    
+    function number entity:isWhitelisted() {
+        if(This:isValid() && This:isPlayer()) {
+            return PLAYER_WHITELIST:exists(This:steamID()) || TEAM_WHITELIST:exists(This:team():teamName())
+        }
+        
+        return 0
+    }
+    
+    function number array:isWhitelisted() {
+        foreach(_:number, Player:entity = This) {
+            if(!Player:isWhitelisted()) {
+                return 0
+            }
+        }
+        
+        return 1
+    }
+    
+    function array getTrigger(Index:number) {
+        switch (Index) {
+            case 1, return TRIGGER1
+            case 2, return TRIGGER2
+            case 3, return TRIGGER3
+            case 4, return TRIGGER4
+        }
+        
+        return array()
+    }
+    
+    function number getDoor(Door:number) {
+        switch (Door) {
+            case 1, return DOOR1
+            case 2, return DOOR2
+            case 3, return DOOR3
+            case 4, return DOOR4
+        }
+        
+        return 0
+    }
+    
+    function setDoor(Door:number, Open:number) {
+        switch (Door) {
+            case 1, DOOR1 = Open, break
+            case 2, DOOR2 = Open, break
+            case 3, DOOR3 = Open, break
+            case 4, DOOR4 = Open, break
+        }
+    }
+    
+    function void entity:actionManager(Command:string, Arguments:array) {
+        switch(Command) {
+            case "help",
+                This:message("Help > Managers")
+                This:message("    {orange <command> help} for info/options", 1)
+                This:message("    {orange list}", 1)
+                This:message("    {orange add} {white <player name>}", 1)
+                This:message("    {orange remove} {white <player name>}", 1)
+            break
+            case "list",
+                This:message("Managers:")
+                if(This == owner()) {
+                    This:message("    {purple You}", 1)
+                }
+                foreach(_:string, Manager:entity = MANAGERS) {
+                    if(Manager:isValid() && Manager:isPlayer()) {
+                        This:message("    " + (This == Manager ? "{purple You}" : Manager:name()), 1)
+                    }
+                }
+            break
+            case "add",
+                local Name = Arguments:concat(" ")
+                local Target = findPlayerByName(Name)
+                
+                if(!Target:isValid() || !Target:isPlayer()) {
+                    error("Could not find player: '" + Name + "'")
+                }
+                
+                if(Target == This) {
+                    error("You are already a manager")
+                }
+                
+                if(Target:isManager()) {
+                    error("Player: '" + Target:name() + "' is already a manager")
+                }
+                
+                MANAGERS[Target:steamID(), entity] = Target
+                This:message("{purple You} added: '" + Target:name() + "' to managers")
+                if(This != owner()) {
+                    owner():message("{purple " + This:name() + "} added: '" + Target:name() + "' to managers")
+                }
+            break
+            case "remove",
+                local Name = Arguments:concat(" ")
+                local Target = findPlayerByName(Name)
+                
+                if(!Target:isValid() || !Target:isPlayer()) {
+                    error("{red Could not find player: '" + Name + "'")
+                }
+                
+                if(Target == This) {
+                    error("You cannot remove yourself from managers")
+                }
+                
+                if(!Target:isManager()) {
+                    error("Player: '" + Target:name() + "' is not a manager")
+                }
+                
+                MANAGERS:removeEntity(Target:steamID())
+                This:message("{purple You} added: '" + Target:name() + "' to managers")
+                if(This != owner()) {
+                    owner():message("{purple " + This:name() + "} added: '" + Target:name() + "' to managers")
+                }
+            break
+            default,
+                if(Arguments:count() == 0) {
+                    This:message("Managers:")
+                    if(This == owner()) {
+                        This:message("    {purple You}", 1)
+                    }
+                    foreach(_:string, Manager:entity = MANAGERS) {
+                        if(Manager:isValid() && Manager:isPlayer()) {
+                            This:message("    " + (This == Manager ? "{purple You}" : Manager:name()), 1)
+                        }
+                    }
+                } else {
+                    error("Unknown command")
+                }
+            break
+        }
+    }
+    
+    function void entity:actionWhitelist(Command:string, Arguments:array) {
+        switch(Command) {
+            case "help",
+                This:message("Help > Whitelist")
+                This:message("    {orange <command> help} for info/options", 1)
+                This:message("    {orange players}", 1)
+                This:message("    {orange teams}", 1)
+            break
+            case "players",
+                local PlayerCommand = Arguments:removeString(1)
+                switch(PlayerCommand) {
+                    case "help",
+                        This:message("Help > Whitelist > Players")
+                        This:message("    {orange <command> help} for info/options", 1)
+                        This:message("    {orange list}", 1)
+                        This:message("    {orange add} {white <player name>}", 1)
+                        This:message("    {orange remove} {white <player name>}", 1)
+                    break
+                    case "list",
+                        This:message("Players:")
+                        if(This == owner()) {
+                            This:message("    {purple You}", 1)
+                        }
+                        foreach(_:string, Player:entity = PLAYER_WHITELIST) {
+                            if(Player:isValid() && Player:isPlayer()) {
+                                This:message("    " + (This == Player ? "{purple You}" : Player:name()), 1)
+                            }
+                        }
+                    break
+                    case "add",
+                        local Name = Arguments:concat(" ")
+                        local Target = findPlayerByName(Name)
+                        
+                        if(!Target:isValid() || !Target:isPlayer()) {
+                            error("Could not find player: '" + Name + "'")
+                        }
+                        
+                        local SteamId = Target:steamID()
+                        if(PLAYER_WHITELIST:exists(SteamId)) {
+                            error("Player: '" + Target:name() + "' is already whitelisted")
+                        }
+                        
+                        PLAYER_WHITELIST[SteamId, entity] = Target
+                        This:message("{purple You} added: '" + Target:name() + "' to whitelist")
+                        if(This != owner()) {
+                            owner():message("{purple " + This:name() + "} added player: '" + Target:name() + "' to whitelist")
+                        }
+                    break
+                    case "remove",
+                        local Name = Arguments:concat(" ")
+                        local Target = findPlayerByName(Name)
+                        
+                        if(!Target:isValid() || !Target:isPlayer()) {
+                            error("Could not find player: '" + Name + "'")
+                        }
+                        
+                        local SteamId = Target:steamID()
+                        if(!PLAYER_WHITELIST:exists(SteamId)) {
+                            error("Player: '" + Target:name() + "' is not whitelisted")
+                        }
+                        
+                        PLAYER_WHITELIST:removeEntity(SteamId)
+                        This:message("{purple You} removed: '" + Target:name() + "' from whitelist")
+                        if(This != owner()) {
+                            owner():message("{purple " + This:name() + "} removed player: '" + Target:name() + "' from whitelist")
+                        }
+                    break
+                    default,
+                        if(Arguments:count() == 0) {
+                            This:message("Players:")
+                            if(This == owner()) {
+                                This:message("    {purple You}", 1)
+                            }
+                            foreach(_:string, Player:entity = PLAYER_WHITELIST) {
+                                if(Player:isValid() && Player:isPlayer()) {
+                                    This:message("    " + (This == Player ? "{purple You}" : Player:name()), 1)
+                                }
+                            }
+                        } else {
+                            error("Unknown command")
+                        }
+                    break
+                }
+            break
+            case "teams",
+                local TeamCommand = Arguments:removeString(1)
+                switch(TeamCommand) {
+                    case "help",
+                        This:message("Help > Whitelist > Teams")
+                        This:message("    {orange <command> help} for info/options", 1)
+                        This:message("    {orange list}", 1)
+                        This:message("    {orange add} {white <team name>}", 1)
+                        This:message("    {orange remove} {white <team name>}", 1)
+                    break
+                    case "list",
+                        This:message("Teams:")
+                        foreach(TeamName:string, _:number = TEAM_WHITELIST) {
+                            This:message("    " + TeamName, 1)
+                        }
+                    break
+                    case "add",
+                        local TeamName = Arguments:concat(" ")
+                        if(!TeamName:isTeamValid()) {
+                            error("Team: '" + TeamName + "' is not a valid team")
+                        }
+                        
+                        if(TEAM_WHITELIST:exists(TeamName)) {
+                            error("Team: '" + TeamName + "' is already whitelisted")
+                        }
+                        
+                        TEAM_WHITELIST[TeamName, number] = 1
+                        This:message("{purple You} added team: '" + TeamName + "' to whitelist")
+                        if(This != owner()) {
+                            owner():message("{purple " + This:name() + "} added team: '" + TeamName + "' to whitelist")
+                        }
+                    break
+                    case "remove",
+                        local TeamName = Arguments:concat(" ")
+                        if(!TeamName:isTeamValid()) {
+                            error("Team: '" + TeamName + "' is not a valid team")
+                        }
+                        
+                        if(!TEAM_WHITELIST:exists(TeamName)) {
+                            error("Team: '" + TeamName + "' is not whitelisted")
+                        }
+                        
+                        TEAM_WHITELIST:removeNumber(TeamName)
+                        This:message("{purple You} removed team: '" + TeamName + "' from whitelist")
+                        if(This != owner()) {
+                            owner():message("{purple " + This:name() + "} removed team: '" + TeamName + "' from whitelist")
+                        }
+                    break
+                    default,
+                        if(Arguments:count() == 0) {
+                            This:message("Teams:")
+                            foreach(TeamName:string, _:number = TEAM_WHITELIST) {
+                                This:message("    " + TeamName, 1)
+                            }
+                        } else {
+                            error("Unknown command")
+                        }
+                    break
+                }
+            break
+        }
+    }
+    
+    function void entity:chatCommand(Command:string, Arguments:array) {
+        if(This == owner()) {
+            hideChat(1)
+        }
+        
+        try {
+            switch(Command) {
+                case "help",
+                    This:message("Help")
+                    This:message("    {orange <command> help} for info/options", 1)
+                    if(This == owner()) {
+                        This:message("    {orange managers}", 1)
+                    }
+                    This:message("    {orange whitelist}", 1)
+                    This:message("    {orange team} {white <player name>}", 1)
+                break
+                case "managers",
+                    if(This == owner()) {
+                        This:actionManager(Arguments:removeString(1), Arguments)
+                    }
+                break,
+                case "whitelist",
+                    This:actionWhitelist(Arguments:removeString(1), Arguments)
+                break
+                case "team",
+                    local Name = Arguments:concat(" ")
+                    local Target = findPlayerByName(Name)
+                    
+                    if(!Target:isValid() || !Target:isPlayer()) {
+                        error("Could not find player: '" + Name + "'")
+                    }
+                    
+                    This:message("Player: '" + Target:name() + "' is on team: '" + Target:team():teamName():upper())
+                break
+                default,
+                    error("Unknown command")
+                break
+            }
+        } catch(Exception) {
+            This:handleError(Exception)
+        }
+    }
+}
+
+event playerDisconnected(Player:entity) {
+    local SteamId = Player:steamID()
+    
+    if(MANAGERS:exists(SteamId)) {
+        MANAGERS:remove(SteamId)
+    }
+    
+    if(PLAYER_WHITELIST:exists(SteamId)) {
+        PLAYER_WHITELIST:remove(SteamId)
+    }
+}
+
+event chat(Player:entity, LastSaid:string, _:number) {
+    local Arguments = LastSaid:replaceRE("%s+", " "):explode(" ")
+    
+    if(Player:isManager()) {
+        local Command = Arguments:removeString(1)
+        if(Command:startsWith("!door")) {
+            try {
+                Player:chatCommand(Arguments:removeString(1), Arguments)
+            } catch(_) {}
+        }
+    }
+}
+
+if((TRIGGER1 & ~TRIGGER1) || (TRIGGER2 & ~TRIGGER2) || (TRIGGER3 & ~TRIGGER3) || (TRIGGER4 & ~TRIGGER4)) {
+    local AllPlayers = table()
+    for(I = 1, 4) {
+        local Players = getTrigger(I)
+        if (Players:count() == 0) {
+            if(getDoor(I)) {
+                timer("door-" + I:toString(), DURATION * 1000)
+            }
+            continue
+        }
+        
+        foreach(_:number, Player:entity = Players) {
+            if(!AllPlayers:exists(Player:steamID())) {
+                AllPlayers[Player:steamID(), entity] = Player
+            }
+        }
+        
+        if (Players:isWhitelisted()) {
+            setDoor(I, 1), stoptimer("door-" + I:toString())
+        } else {
+            if(getDoor(I)) {
+                timer("door-" + I:toString(), DURATION * 1000)
+            }
+            
+            STRANGER = 1
+            
+            break
+        }
+    }
+    
+    foreach(SteamId:string, Player:entity = AllPlayers) {
+        if(Player:isWhitelisted()) {
+            if(STANGERS:exists(SteamId)) {
+                STANGERS:remove(SteamId)
+            }
+        } else {
+            if(!STANGERS:exists(SteamId)) {
+                STANGERS[SteamId, entity] = Player
+                
+                owner():message(":warning: {!red " + Player:name() + "} {white (" + Player:teamTitle():proper() + ") entered!} :warning:")
+                owner():soundPlay("buttons/button16.wav", 0.056, "buttons/button16.wav")
+                soundVolume("buttons/button16.wav", 0.5)
+                foreach(SteamId:string, Manager:entity = MANAGERS) {
+                    Manager:message(":warning: {!red " + Player:name() + "} {white (" + Player:teamTitle():proper() + ") entered!} :warning:")
+                }
+            }
+        }
+    }
+    
+    foreach(SteamId:string, Player:entity = STANGERS) {
+        if(!AllPlayers:exists(SteamId)) {
+            if(STANGERS:exists(SteamId)) {
+                STANGERS:remove(SteamId)
+                
+                #[
+                owner():message(":warning: {!red " + Player:name() + "} {white (" + Player:teamTitle():proper() + ") left!} :warning:")
+                owner():soundPlay("buttons/button16.wav", 0.056, "buttons/button16.wav")
+                soundVolume("buttons/button16.wav", 0.5)
+                foreach(SteamId:string, Manager:entity = MANAGERS) {
+                    Manager:message(":warning: {!red " + Player:name() + "} {white (" + Player:teamTitle():proper() + ") left!} :warning:")
+                }
+                ]#
+            }
+        }
+    }
+}
+
+if(clkName():startsWith("door-")) {
+    local I = clkName():matchFirst("door%-(%d+)"):toNumber()
+    if(getDoor(I)) {
+        setDoor(I, 0)
+    }
+}
+

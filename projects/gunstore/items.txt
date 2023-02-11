@@ -1,0 +1,314 @@
+if(first()||dupefinished()) {
+    function table sStoreCategories() {
+        return table(
+            table(
+                "name" = "pistols",
+                "icon" = "a"
+            ),
+            table(
+                "name" = "smgs",
+                "icon" = "q"
+            ),
+            table(
+                "name" = "shotguns",
+                "icon" = "B"
+            ),
+            table(
+                "name" = "rifles",
+                "icon" = "b"
+            ),
+            table(
+                "name" = "snipers",
+                "icon" = "r"
+            ),
+            table(
+                "name" = "heavy",
+                "icon" = "z"
+            ),
+            table(
+                "name" = "armor",
+                "icon" = "p"
+            ),
+            table(
+                "name" = "explosives",
+                "icon" = "O"
+            ),
+            table(
+                "name" = "melee",
+                "icon" = "j"
+            )
+        )
+    }
+    
+    function table sStoreItems() {
+        local Items = table()
+        
+        #PISTOLS
+        Items["pistols", table] = table(
+            table(
+                "name" = "Desert Eagle",
+                "price" = 1050,
+                "max" = 2
+            ),
+            table(
+                "name" = "MP 412 Rex",
+                "price" = 1950,
+                "max" = 2
+            ),
+            table(
+                "name" = "M1911",
+                "price" = 750,
+                "max" = 2
+            ),
+            table(
+                "name" = "P99",
+                "price" = 800,
+                "max" = 2
+            ),
+            table(
+                "name" = "PM Makarov",
+                "price" = 800,
+                "max" = 2
+            )
+        )
+        
+        #SMGS
+        Items["smgs", table] = table(
+            table(
+                "name" = "H&K G36C",
+                "price" = 2990,
+                "max" = 1
+            ),
+            table(
+                "name" = "MAC-11",
+                "price" = 1430,
+                "max" = 1
+            ),
+            table(
+                "name" = "MP5",
+                "price" = 1990,
+                "max" = 1
+            ),
+            table(
+                "name" = "MP7",
+                "price" = 1650,
+                "max" = 1
+            ),
+            table(
+                "name" = "MP9",
+                "price" = 1400,
+                "max" = 1
+            ),
+            table(
+                "name" = "UMP 45",
+                "price" = 1950,
+                "max" = 1
+            )
+        )
+        
+        #SHOTGUNS
+        Items["shotguns", table] = table(
+            table(
+                "name" = "M3 Super 90",
+                "price" = 3250,
+                "max" = 1
+            ),
+            table(
+                "name" = "M4 Super 90",
+                "price" = 3900,
+                "max" = 1
+            ),
+            table(
+                "name" = "Saiga-12K",
+                "price" = 4000,
+                "max" = 1
+            ),
+            table(
+                "name" = "Shorty Shotgun",
+                "price" = 1600,
+                "max" = 1
+            )
+        )
+        
+        #RIFLES
+        Items["rifles", table] = table(
+            table(
+                "name" = "AR-15",
+                "price" = 3950,
+                "max" = 1
+            ),
+            table(
+                "name" = "AK-74",
+                "price" = 3800,
+                "max" = 1
+            ),
+            table(
+                "name" = "AN-94",
+                "price" = 4800,
+                "max" = 1
+            ),
+            table(
+                "name" = "FAMAS",
+                "price" = 3750,
+                "max" = 1
+            ),
+            table(
+                "name" = "FN FAL",
+                "price" = 5500,
+                "max" = 1
+            ),
+            table(
+                "name" = "G2 Contender",
+                "price" = 2000,
+                "max" = 1
+            ),
+            table(
+                "name" = "G3A3",
+                "price" = 2950,
+                "max" = 1
+            ),
+            table(
+                "name" = "Magpul Masada",
+                "price" = 6250,
+                "max" = 1
+            ),
+            table(
+                "name" = "M14",
+                "price" = 3780,
+                "max" = 1
+            ),
+            table(
+                "name" = "M16A2",
+                "price" = 4140,
+                "max" = 1
+            ),
+            table(
+                "name" = "M16A4",
+                "price" = 4260,
+                "max" = 1
+            ),
+            table(
+                "name" = "M4A1",
+                "price" = 4320,
+                "max" = 1
+            ),
+            table(
+                "name" = "SCAR-H",
+                "price" = 3625,
+                "max" = 1
+            ),
+            table(
+                "name" = "XM8",
+                "price" = 4500,
+                "max" = 1
+            )
+        )
+        
+        #SNIPERS
+        Items["snipers", table] = table(
+            table(
+                "name" = "AWM Sniper Rifle",
+                "price" = 6800,
+                "max" = 1
+            ),
+            table(
+                "name" = "L115 Rifle",
+                "price" = 5600,
+                "max" = 1
+            ),
+            table(
+                "name" = "M98B Sniper Rifle",
+                "price" = 6800,
+                "max" = 1
+            ),
+            table(
+                "name" = "SVD",
+                "price" = 7000,
+                "max" = 1
+            )
+        )
+        
+        #HEAVY
+        Items["heavy", table] = table(
+            table(
+                "name" = "M249 LMG",
+                "price" = 13600,
+                "max" = 1
+            )
+        )
+        
+        #ARMOR
+        Items["armor", table] = table(
+            table(
+                "name" = "Light Armor",
+                "price" = 1000,
+                "max" = 1
+            ),
+            table(
+                "name" = "Medium Armor",
+                "price" = 1500,
+                "max" = 1
+            ),
+            table(
+                "name" = "Heavy Armor",
+                "price" = 2000,
+                "max" = 1
+            )
+        )
+        
+        #EXPLOSIVES
+        Items["explosives", table] = table(
+            table(
+                "name" = "EX41 Grenade Launcher",
+                "price" = 30000,
+                "max" = 1
+            ),
+            table(
+                "name" = "IED Detonator",
+                "price" = 37500,
+                "max" = 1
+            ),
+            table(
+                "name" = "M202 Rocker Lancher",
+                    "price" = 64000,
+                "max" = 1
+            ),
+            table(
+                "name" = "M79 Grenade Launcher",
+                "price" = 31250,
+                "max" = 1
+            ),
+            table(
+                "name" = "Milkor Mk1 Grenade Launcher",
+                "price" = 43750,
+                "max" = 1
+            ),
+            table(
+                "name" = "Proximity Mine",
+                "price" = 22000,
+                "max" = 1
+            ),
+            table(
+                "name" = "RPG-7",
+                "price" = 43750,
+                "max" = 1
+            ),
+            table(
+                "name" = "Timed C4",
+                "price" = 57500,
+                "max" = 1
+            )
+        )
+        
+        #MELEE
+        Items["melee", table] = table(
+            table(
+                "name" = "Throwing Knife",
+                "price" = 2000,
+                "max" = 1
+            )
+        )
+        
+        return Items
+    }
+}

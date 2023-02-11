@@ -1,0 +1,120 @@
+@name Camera Master
+@inputs SLAVE01:entity SLAVE02:entity SLAVE03:entity SLAVE04:entity SLAVE05:entity SLAVE06:entity SLAVE07:entity SLAVE08:entity SLAVE09:entity SLAVE10:entity SLAVE11:entity SLAVE12:entity SLAVE13:entity SLAVE14:entity
+@inputs SCREEN:wirelink CAMERA:entity
+@inputs LIGHT:entity
+@persist WIDTH:number HEIGHT:number TIME:number
+@persist SECTIONS:table COMPLETE:number
+
+#TODO:
+#[
+    1. Automatically Find Slaves
+    2. Multiple Lights
+    3. Light CutOff
+    4. Mirror
+]#
+
+if(first() || dupefinished()) {
+    WIDTH = 128, HEIGHT = 128
+    
+    SECTIONS = table()
+    
+    #SCREEN[0 - 786431] #image data
+    SCREEN[1048569] = 3 #colour mode
+    SCREEN[1048570] = 0 #clear row
+    SCREEN[1048571] = 0 #clear column
+    SCREEN[1048572] = WIDTH #width
+    SCREEN[1048573] = HEIGHT #height
+    SCREEN[1048574] = 0 #clear screen
+    SCREEN[1048575] = 1 #clk
+    
+    function table cSections(WIDTH:number, HEIGHT:number) {
+        local T = table()
+        
+        local SW = WIDTH / 8
+        local SH = HEIGHT / 8
+        
+        for(J = 0, 8 - 1) {
+            for(I = 0, 8 - 1) {
+                T:pushTable(
+                    table(
+                        "x" = SW * I,
+                        "y" = SH * J,
+                        "w" = SW,
+                        "h" = SH
+                    )
+                )
+            }
+        }
+        
+        return T
+    }
+    
+    function void entity:cSendCapture() {
+        if(This:isValid()) {
+            dsSendDirect("capture", This, table(
+                "master" = entity(),
+                "camera" = CAMERA,
+                "fov" = 60,
+                "range" = 1000,
+                "width" = WIDTH,
+                "height" = HEIGHT,
+                "section" = SECTIONS:removeTable(1),
+                "wirelink" = SCREEN,
+                "light" = LIGHT,
+                "materials" = table(
+                    "PROPS/CARPETFLOOR001A" = vec(130, 35, 35),
+                    "PROPS/CARPETFLOOR003A" = vec(20, 80, 20),
+                    "CS_ASSAULT/ASSAULT_BRICK1" = vec(180, 180, 180)
+                )
+            ))
+        }
+    }
+}
+
+if(dsClk("capture-done")) {
+    local SLAVE = dsGetEntity()
+    
+    if(SECTIONS:count() > 0) {
+        SLAVE:cSendCapture()
+    } else {
+        if(!COMPLETE) {
+            COMPLETE = 1, concmd("say capture complete: " + format("%.2f", systime() - TIME) + "s")
+        }
+    }
+}
+
+event chat(Player:entity, LastSaid:string, _:number) {
+    if(Player == owner()) {
+        local LastSaid = owner():lastSaid():lower()
+        
+        switch(LastSaid) {
+            case "!capture",
+                COMPLETE = 0
+                
+                TIME = systime()
+                
+                SCREEN[1048574] = 1
+                
+                SECTIONS = cSections(WIDTH, HEIGHT)
+                SLAVE01:cSendCapture()
+                SLAVE02:cSendCapture()
+                SLAVE03:cSendCapture()
+                SLAVE04:cSendCapture()
+                SLAVE05:cSendCapture()
+                SLAVE06:cSendCapture()
+                SLAVE07:cSendCapture()
+                SLAVE08:cSendCapture()
+            break
+            case "!material",
+                rangerFilter(owner())
+                local Ranger = rangerOffset(9999, owner():shootPos(), (owner():aimPos() - owner():shootPos()):normalized())
+                if(Ranger:hit()) {
+                    print(Ranger:hitTexture())
+                    
+                }
+            break
+            default,
+            break
+        }
+    }
+}

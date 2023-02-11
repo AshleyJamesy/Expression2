@@ -1,0 +1,51 @@
+if(first() || dupefinished()) {
+    function void entity:fppShare(Type:string, Share:number) {
+        if(This:isValid()) {
+            switch(Type) {
+                case "physgun",
+                    concmd("FPP_ShareProp " + This:id() + " SharePhysgun1 " + (Share > 0))
+                break
+                case "gravgun",
+                    concmd("FPP_ShareProp " + This:id() + " ShareGravgun1 " + (Share > 0))
+                break
+                case "use",
+                    concmd("FPP_ShareProp " + This:id() + " SharePlayerUse1 " + (Share > 0))
+                break
+                case "damage",
+                    concmd("FPP_ShareProp " + This:id() + " ShareEntityDamage1 " + (Share > 0))
+                break
+                case "toolgun",
+                    concmd("FPP_ShareProp " + This:id() + " ShareToolgun1 " + (Share > 0))
+                break
+                default,
+                break
+            }
+        }
+    }
+    
+    function void entity:fppShare(Physgun:number, Gravgun:number, Use:number, Damage:number, Toolgun:number) {
+        This:fppShare("physgun", Physgun)
+        This:fppShare("gravgun", Gravgun)
+        This:fppShare("use", Use)
+        This:fppShare("damage", Damage)
+        This:fppShare("toolgun", Toolgun)
+    }
+    
+    function void entity:fppShare(Share:number) {
+        This:fppShare(Share, Share, Share, Share, Share)
+    }
+    
+    #No E2 function to get Player:UserID() - see github below
+    #The UserID can be found running console command: "status"
+    #https://github.com/FPtje/Falcos-Prop-protection/blob/4fc7ff98e1cdad152531742262c6977012d7c52d/lua/fpp/client/menu.lua#L1224
+    #https://github.com/FPtje/Falcos-Prop-protection/blob/4fc7ff98e1cdad152531742262c6977012d7c52d/lua/fpp/client/menu.lua#L1196
+    
+    #Sharing Props with Players
+    #[
+        function void entity:fppShare(Player:entity, Share:number) {
+            if(Player:isValid() && Player:isPlayer()) {
+                concmd("FPP_ShareProp " + This:id() + " + ????? + " + (Share > 0))
+            }
+        }
+    ]#
+}

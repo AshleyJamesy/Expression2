@@ -1,0 +1,119 @@
+@persist HTTP_QUEUE:table [HTTP_ID, HTTP_QUEUED]:number
+
+#include "library/event/1.0/init"
+
+if(first() || dupefinished()) {
+    runOnFile(1)
+    
+    HTTP_ID = 0
+    HTTP_QUEUED = 0
+    HTTP_QUEUE = table()
+    
+    function void httpGet(Name:string, Url:string, Headers:table) {
+        if(fileCanWrite()) {
+            HTTP_ID++
+            local Request = table(
+                "id" = HTTP_ID,
+                "name" = Name,
+                "url" = Url,
+                "method" = "GET",
+                "headers" = Headers,
+                "body" = ""
+            )
+            HTTP_QUEUE:pushTable(Request)
+            fileWrite("requests/" + HTTP_ID + ".json", jsonEncode(Request))
+            
+            if(HTTP_QUEUED == 0) {
+                HTTP_QUEUED = 1
+                eEventPush("http.check")
+            }
+        } else {
+            eEventPush("http.request", 1000, table(
+                "id" = HTTP_ID,
+                "name" = Name,
+                "url" = Url,
+                "method" = "GET",
+                "headers" = Headers,
+                "body" = ""
+            ))
+        }
+    }
+    
+    function void httpPost(Name:string, Url:string, Headers:table, Body:string) {
+        if(fileCanWrite()) {
+            HTTP_ID++
+            local Request = table(
+                "id" = HTTP_ID,
+                "name" = Name,
+                "url" = Url,
+                "method" = "POST",
+                "headers" = Headers,
+                "body" = Body
+            )
+            HTTP_QUEUE:pushTable(Request)
+            fileWrite("requests/" + HTTP_ID + ".json", jsonEncode(Request))
+            
+            if(HTTP_QUEUED == 0) {
+                HTTP_QUEUED = 1
+                eEventPush("http.check")
+            }
+        } else {
+            eEventPush("http.request", 1000, table(
+                "name" = Name,
+                "url" = Url,
+                "method" = "POST",
+                "headers" = Headers,
+                "body" = Body
+            ))
+        }
+    }
+}
+
+if(eEventClk("http.request")) {
+    local Request = eEventGetPayload()
+    
+    switch(Request["method", string]) {
+        case "GET",
+            httpGet(Request["name", string], Request["url", string], Request["headers", table])
+        break
+        case "POST",
+            httpPost(Request["name", string], Request["url", string], Request["headers", table], Request["body", string])
+        break
+    }
+}
+
+if(eEventClk("http.check")) {
+    HTTP_QUEUED = 0
+    if(HTTP_QUEUE:count() > 0) {
+        HTTP_QUEUED = 1
+        eEventPush("http.check", 1000)
+    }
+    
+    if(fileCanLoad()) {
+        foreach(_:number, Request:table = HTTP_QUEUE) {
+            fileLoad("requests/" + Request["id", number] + "-done.json")
+        }
+    }
+}
+
+if(fileClk()) {
+    if(fileStatus() == _FILE_OK) {
+        fileWrite(fileName(), "")
+        
+        for(I = 1, HTTP_QUEUE:count()) {
+            local Request = HTTP_QUEUE[I, table]
+            if(fileName() == "requests/" + Request["id", number] + "-done.json") {
+                eEventPush("http.complete", 0, table(
+                    "request" = Request,
+                    "response" = jsonDecode(fileRead())
+                ))
+                HTTP_QUEUE:remove(I)
+                break
+            }
+        }
+    } elseif(fileStatus() == _FILE_404) {
+    } elseif(fileStatus() == _FILE_TIMEOUT) {
+    } elseif(fileStatus() == _FILE_TRANSFER_ERROR) {
+    } elseif(fileStatus() == _FILE_UNKNOWN) {
+    }
+}

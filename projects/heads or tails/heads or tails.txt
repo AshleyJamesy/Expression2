@@ -1,0 +1,372 @@
+@name Heads OR Tails
+@inputs EGP_SCREEN:wirelink EGP_USER:entity 
+@persist BUTTONS:table
+@persist PRICE:number FEE:number COUNTDOWN:number
+@persist HEADS:entity HEADS_PAID:number
+@persist TAILS:entity TAILS_PAID:number
+@persist WINNER:entity TIME:number
+
+if(first() || dupefinished()) {
+    PRICE = 7500
+    FEE = 0.3334
+    
+    #------------------------------------------------------------------------------------------------
+    
+    HEADS = noentity()
+    HEADS_PAID = 0
+    TAILS = noentity()
+    TAILS_PAID = 0
+    WINNER = noentity()
+    
+    TIME = 0
+    BUTTONS = table()
+    
+    function string string:comma() {
+        local Match = 
+            This:match("([-]?)(%d+)([.]?%d*)")
+        
+        return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
+    }
+    
+    function string number:comma() {
+        local Match = 
+            This:toString():match("([-]?)(%d+)([.]?%d*)")
+        
+        return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
+    }
+    
+    function void wire() {
+        findIncludePlayerProps(owner())
+        findByClass("gmod_wire_egp*")
+        findSortByDistance(entity():pos())
+        
+        if(find()) {   
+            if(find():owner() == owner()) {
+                if(!EGP_SCREEN:entity()) {
+                    #ifdef entity:createWire(entity, string, string)
+                    
+                    local EGP = find()
+                    entity():createWire(EGP, "EGP_SCREEN", "wirelink")
+                    entity():createWire(EGP, "EGP_USER", "User")
+                    
+                    #endif
+                }
+            }
+        }
+        
+        EGP_SCREEN:egpClear()
+        EGP_SCREEN:egpDrawTopLeft(1)
+    }
+    
+    function entity:ulxSendPrivateMessage(String:string) {
+        if(This:isValid() && This:isPlayer()) {
+            if(This == owner()) {
+                print(String)
+            } else {
+                concmd("ulx psay $" + This:steamID() + " \"" + String + "\"")
+            }
+        }
+    }
+    
+    function void entity:message(Message:string, NoHeader:number) {
+        This:ulxSendPrivateMessage((NoHeader ? "" : "{yellow Heads OR Tails:} ") + Message)
+    }
+    
+    function void entity:message(Message:string) {
+        This:message(Message, 0)
+    }
+    
+    function void entity:pressed(Button:string) {
+        local Name = This:name():length() > 12 ? (This:name():sub(1, 9) + "...") : This:name()
+        
+        switch(Button) {
+            case "heads",
+                if(HEADS == noentity()) {
+                    if(This != TAILS) {
+                        if(moneyRequest(This, PRICE + (PRICE * FEE), 15, "Heads: $" + PRICE:comma() + " + " + (FEE * 100) + "% fee")) {
+                            HEADS = This
+                            EGP_SCREEN:egpSetText(2, Name)
+                            
+                            #casino vs player
+                            TAILS = owner()
+                            TAILS_PAID = 1
+                            EGP_SCREEN:egpSetText(4, "DM Casino")
+                            timer("timeout", 15000)
+                        }
+                    }
+                } else {
+                    if(HEADS == This) {
+                        if(HEADS_PAID) {
+                            HEADS = noentity()
+                            HEADS_PAID = 0
+                            COUNTDOWN = 0
+                            stoptimer("countdown")
+                            moneyGive(This, PRICE)
+                            EGP_SCREEN:egpSetText(4, "DM Casino")
+                            EGP_SCREEN:egpSetText(6, "VS")
+                            
+                            #casino vs player
+                            TAILS = owner()
+                            TAILS_PAID = 0
+                            EGP_SCREEN:egpSetText(4, "TAILS")
+                            stoptimer("timeout")
+                        }
+                    }
+                }
+            break
+            case "tails",
+                if(TAILS == noentity()) {
+                    if(This != HEADS) {
+                        if(moneyRequest(This, PRICE + (PRICE * FEE), 15, "Tails: $" + PRICE:comma() + " + " + (FEE * 100) + "% fee")) {
+                            TAILS = This
+                            EGP_SCREEN:egpSetText(4, Name)
+                            
+                            #DM casino vs player
+                            HEADS = owner()
+                            HEADS_PAID = 1
+                            EGP_SCREEN:egpSetText(2, "DM Casino")
+                            timer("timeout", 15000)
+                        }
+                    }
+                } else {
+                    if(TAILS == This) {
+                        if(TAILS_PAID) {
+                            TAILS = noentity()
+                            TAILS_PAID = 0
+                            COUNTDOWN = 0
+                            stoptimer("countdown")
+                            moneyGive(This, PRICE)
+                            EGP_SCREEN:egpSetText(4, "TAILS")
+                            EGP_SCREEN:egpSetText(6, "VS")
+                            
+                            #casino vs player
+                            HEADS = noentity()
+                            HEADS_PAID = 0
+                            EGP_SCREEN:egpSetText(2, "HEADS")
+                            stoptimer("timeout")
+                        }
+                    }
+                }
+            break
+        }
+    }
+    
+    function void draw() {
+        local I = 0
+        I++ #1
+        EGP_SCREEN:egpBox(I, vec2(), vec2(512, 256))
+        EGP_SCREEN:egpColor(I, vec4(255, 50, 50, 255))
+        BUTTONS["heads", number] = I
+        
+        I++ #2
+        EGP_SCREEN:egpTextLayout(I, "HEADS", vec2(0, 0), vec2(512, 256))
+        EGP_SCREEN:egpSize(I, 64)
+        EGP_SCREEN:egpAlign(I, 1, 1)
+        
+        I++ #3
+        EGP_SCREEN:egpBox(I, vec2(0, 256), vec2(512, 256))
+        EGP_SCREEN:egpColor(I, vec4(50, 50, 255, 255))
+        
+        I++ #4
+        EGP_SCREEN:egpTextLayout(I, "TAILS", vec2(0, 256), vec2(512, 256))
+        EGP_SCREEN:egpSize(I, 64)
+        EGP_SCREEN:egpAlign(I, 1, 1)
+        BUTTONS["tails", number] = I
+        
+        I++ #5
+        EGP_SCREEN:egpCircle(I, vec2(256, 256), vec2(64, 64))
+        
+        I++ #6
+        EGP_SCREEN:egpTextLayout(I, "VS", vec2(0, 256 - (64 * 0.5)), vec2(512, 64))
+        EGP_SCREEN:egpColor(I, vec4(0, 0, 0, 255))
+        EGP_SCREEN:egpSize(I, 64)
+        EGP_SCREEN:egpAlign(I, 1, 1)
+    }
+    
+    wire()
+    draw()
+}
+
+if(EGP_USER & ~EGP_USER) {
+    local Cursor = EGP_SCREEN:egpCursor(EGP_USER)
+    
+    if(WINNER == noentity()) {
+        foreach(Name:string, Id:number = BUTTONS) {
+            if(inrange(Cursor, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpPos(Id) + EGP_SCREEN:egpSize(Id))) {
+                EGP_USER:pressed(Name)
+                break
+            }
+        }
+    }
+}
+
+if(clk("countdown")) {
+    COUNTDOWN--
+    
+    if(inrange(COUNTDOWN, 1, 3)) {
+        EGP_SCREEN:entity():soundPlay("pcasino/wheelslotmachine/stop_" + (4 - COUNTDOWN) + ".wav", 2, "pcasino/wheelslotmachine/stop_" + (4 - COUNTDOWN) + ".wav")
+    }
+    
+    if(COUNTDOWN == 0) {
+        EGP_SCREEN:entity():soundPlay("pcasino/basicslotmachine/win_tune.wav", 2.09, "pcasino/basicslotmachine/win_tune.wav")
+        
+        if(randint(0,1)) {
+            WINNER = HEADS
+        } else {
+            WINNER = TAILS
+        }
+        
+        #make owner always win
+        WINNER = owner()
+        
+        timer("animate", 0)
+    } else {
+        EGP_SCREEN:egpSetText(6, COUNTDOWN:toString())
+        timer("countdown", 1000)
+    }
+}
+
+if(clk("animate")) {
+    TIME += 1 / 8
+    
+    local Size = min(256 * TIME, 256)
+    if(WINNER == HEADS) {
+        EGP_SCREEN:egpSize(1, vec2(512, 256 + Size))
+        EGP_SCREEN:egpSize(2, vec2(512, 256 + Size))
+        EGP_SCREEN:egpPos(3, vec2(0, 256 + Size))
+        EGP_SCREEN:egpPos(4, vec2(0, 256 + Size))
+    }
+    
+    if(WINNER == TAILS) {
+        EGP_SCREEN:egpPos(1, vec2(0, -Size))
+        EGP_SCREEN:egpPos(2, vec2(0, -Size))
+        EGP_SCREEN:egpPos(3, vec2(0, 256 - Size))
+        EGP_SCREEN:egpPos(4, vec2(0, 256 - Size))
+        EGP_SCREEN:egpSize(3, vec2(512, 256 + Size))
+        EGP_SCREEN:egpSize(4, vec2(512, 256 + Size))
+    }
+    
+    local CircleSize = max(64 - (64 * (TIME * 3)), 0)
+    EGP_SCREEN:egpSize(5, vec2(CircleSize, CircleSize))
+    EGP_SCREEN:egpAlpha(6, 0)
+    
+    if(TIME >= 1) {
+        local Name = WINNER:name():length() > 12 ? (WINNER:name():sub(1, 9) + "...") : WINNER:name()
+        
+        #casino vs player
+        if(WINNER == owner()) {
+            Name = "DM Casino"
+        }
+        
+        if(WINNER == HEADS) {
+            HEADS:message("You won $" + PRICE:comma() + "!")
+            TAILS:message("You lost.")
+            EGP_SCREEN:egpSetText(2, Name + "\nWins!")
+            moneyGive(WINNER, PRICE * 2)
+        }
+        
+        if(WINNER == TAILS) {
+            TAILS:message("You won $" + PRICE:comma() + "!")
+            HEADS:message("You lost.")
+            EGP_SCREEN:egpSetText(4, Name + "\nWins!")
+            moneyGive(WINNER, PRICE * 2)
+        }
+        
+        timer("reset", 3000)
+    } else {
+        timer("animate", 0)
+    }
+}
+
+if(clk("reset")) {
+    HEADS = noentity()
+    HEADS_PAID = 0
+    TAILS = noentity()
+    TAILS_PAID = 0
+    WINNER = noentity()
+    
+    draw()
+}
+
+if(moneyClk()) {
+    local Player = moneyClkPlayer()
+    if(Player == HEADS) {
+        HEADS_PAID = 1
+    }
+    
+    if(Player == TAILS) {
+        TAILS_PAID = 1
+    }
+    
+    if(HEADS_PAID && TAILS_PAID) {
+        COUNTDOWN = 5
+        EGP_SCREEN:egpSetText(6, COUNTDOWN:toString())
+        timer("countdown", 1000)
+    } else {
+        COUNTDOWN = 0
+        EGP_SCREEN:egpSetText(6, "VS")
+    }
+    
+    stoptimer("timeout")
+}
+
+#PAYMENT: FAILED -----------------------------------------------------------------------------------------------
+if(clk("timeout")) {
+    HEADS = noentity()
+    HEADS_PAID = 0
+    TAILS = noentity()
+    TAILS_PAID = 0
+    WINNER = noentity()
+    
+    draw()
+}
+
+if(moneyNoClk()) {
+    local Player = moneyNoClkPlayer()
+    if(Player == HEADS) {
+        HEADS = noentity()
+        EGP_SCREEN:egpSetText(2, "HEADS")
+        
+        #casino vs player
+        EGP_SCREEN:egpSetText(4, "TAILS")
+        TAILS = noentity()
+        TAILS_PAID = 0
+        stoptimer("timeout")
+    }
+    
+    if(Player == TAILS) {
+        TAILS = noentity()
+        EGP_SCREEN:egpSetText(4, "TAILS")
+        
+        #casino vs player
+        EGP_SCREEN:egpSetText(2, "HEADS")
+        HEADS = noentity()
+        HEADS_PAID = 0
+        stoptimer("timeout")
+    }
+}
+
+if(moneyTimeout()) {
+    local Player = moneyTimeoutPlayer()
+    if(Player == HEADS) {
+        HEADS = noentity()
+        EGP_SCREEN:egpSetText(2, "HEADS")
+        
+        #casino vs player
+        EGP_SCREEN:egpSetText(4, "TAILS")
+        TAILS = noentity()
+        TAILS_PAID = 0
+        stoptimer("timeout")
+    }
+    
+    if(Player == TAILS) {
+        TAILS = noentity()
+        EGP_SCREEN:egpSetText(4, "TAILS")
+        
+        #casino vs player
+        EGP_SCREEN:egpSetText(2, "HEADS")
+        HEADS = noentity()
+        HEADS_PAID = 0
+        stoptimer("timeout")
+    }
+}
