@@ -15,22 +15,17 @@ if(first() || dupefinished()) {
     }
     
     function string number:comma() {
-        local Match = 
-            This:toString():match("([-]?)(%d+)([.]?%d*)")
-        
-        return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
+        return This:toString():comma()
     }
     
-    function string string:proper() { 
+    function string string:proper() {
         local Words = table()
         
         local String = This
-        foreach(_:number, Match:array = This:gmatch("(%l)(%w+)")) {
+        foreach(_:number, Match:array = This:gmatch("(%w)(%w+)")) {
             local Word = Match[1, string] + Match[2, string]
-            
             if(!Words:exists(Word)) {
                 Words[Word, number] = 1
-                
                 String = String:replace(Word, Match[1, string]:upper() + Match[2, string]:lower())
             }
         }
@@ -38,3 +33,4 @@ if(first() || dupefinished()) {
         return String
     }
 }
+
