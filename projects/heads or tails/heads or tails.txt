@@ -4,11 +4,12 @@
 @persist PRICE:number FEE:number COUNTDOWN:number
 @persist HEADS:entity HEADS_PAID:number
 @persist TAILS:entity TAILS_PAID:number
-@persist WINNER:entity TIME:number
+@persist CASINO:number WINNER:entity TIME:number
 
 if(first() || dupefinished()) {
-    PRICE = 7500
-    FEE = 0.3334
+    CASINO = 0
+    PRICE = 10000
+    FEE = 0.1
     
     #------------------------------------------------------------------------------------------------
     
@@ -79,18 +80,26 @@ if(first() || dupefinished()) {
     function void entity:pressed(Button:string) {
         local Name = This:name():length() > 12 ? (This:name():sub(1, 9) + "...") : This:name()
         
+        local Price = PRICE
+        local Fee = FEE
+        
+        #don't charge fee if they vs casino
+        if(CASINO) {
+            Fee = 0
+        }
+        
         switch(Button) {
             case "heads",
                 if(HEADS == noentity()) {
                     if(This != TAILS) {
-                        if(moneyRequest(This, PRICE + (PRICE * FEE), 15, "Heads: $" + PRICE:comma() + " + " + (FEE * 100) + "% fee")) {
+                        if(moneyRequest(This, Price + (Price * Fee), 15, "Heads: $" + Price:comma() + " + " + (Fee * 100) + "% fee")) {
                             HEADS = This
                             EGP_SCREEN:egpSetText(2, Name)
                             
                             #casino vs player
                             TAILS = owner()
                             TAILS_PAID = 1
-                            EGP_SCREEN:egpSetText(4, "DM Casino")
+                            EGP_SCREEN:egpSetText(4, "Casino")
                             timer("timeout", 15000)
                         }
                     }
@@ -102,14 +111,16 @@ if(first() || dupefinished()) {
                             COUNTDOWN = 0
                             stoptimer("countdown")
                             moneyGive(This, PRICE)
-                            EGP_SCREEN:egpSetText(4, "DM Casino")
+                            EGP_SCREEN:egpSetText(4, "Casino")
                             EGP_SCREEN:egpSetText(6, "VS")
                             
                             #casino vs player
-                            TAILS = owner()
-                            TAILS_PAID = 0
-                            EGP_SCREEN:egpSetText(4, "TAILS")
-                            stoptimer("timeout")
+                            if(CASINO) {
+                                TAILS = owner()
+                                TAILS_PAID = 0
+                                EGP_SCREEN:egpSetText(4, "TAILS")
+                                stoptimer("timeout")
+                            }
                         }
                     }
                 }
@@ -117,15 +128,17 @@ if(first() || dupefinished()) {
             case "tails",
                 if(TAILS == noentity()) {
                     if(This != HEADS) {
-                        if(moneyRequest(This, PRICE + (PRICE * FEE), 15, "Tails: $" + PRICE:comma() + " + " + (FEE * 100) + "% fee")) {
+                        if(moneyRequest(This, Price + (Price * Fee), 15, "Tails: $" + Price:comma() + " + " + (Fee * 100) + "% fee")) {
                             TAILS = This
                             EGP_SCREEN:egpSetText(4, Name)
                             
-                            #DM casino vs player
-                            HEADS = owner()
-                            HEADS_PAID = 1
-                            EGP_SCREEN:egpSetText(2, "DM Casino")
-                            timer("timeout", 15000)
+                            #casino vs player
+                            if(CASINO) {
+                                HEADS = owner()
+                                HEADS_PAID = 1
+                                EGP_SCREEN:egpSetText(2, "Casino")
+                                timer("timeout", 15000)
+                            }
                         }
                     }
                 } else {
@@ -140,10 +153,12 @@ if(first() || dupefinished()) {
                             EGP_SCREEN:egpSetText(6, "VS")
                             
                             #casino vs player
-                            HEADS = noentity()
-                            HEADS_PAID = 0
-                            EGP_SCREEN:egpSetText(2, "HEADS")
-                            stoptimer("timeout")
+                            if(CASINO) {
+                                HEADS = noentity()
+                                HEADS_PAID = 0
+                                EGP_SCREEN:egpSetText(2, "HEADS")
+                                stoptimer("timeout")
+                            }
                         }
                     }
                 }
@@ -216,9 +231,6 @@ if(clk("countdown")) {
             WINNER = TAILS
         }
         
-        #make owner always win
-        WINNER = owner()
-        
         timer("animate", 0)
     } else {
         EGP_SCREEN:egpSetText(6, COUNTDOWN:toString())
@@ -254,8 +266,10 @@ if(clk("animate")) {
         local Name = WINNER:name():length() > 12 ? (WINNER:name():sub(1, 9) + "...") : WINNER:name()
         
         #casino vs player
-        if(WINNER == owner()) {
-            Name = "DM Casino"
+        if(CASINO) {
+            if(WINNER == owner()) {
+                Name = "Casino"
+            }
         }
         
         if(WINNER == HEADS) {
@@ -328,10 +342,12 @@ if(moneyNoClk()) {
         EGP_SCREEN:egpSetText(2, "HEADS")
         
         #casino vs player
-        EGP_SCREEN:egpSetText(4, "TAILS")
-        TAILS = noentity()
-        TAILS_PAID = 0
-        stoptimer("timeout")
+        if(CASINO) {
+            EGP_SCREEN:egpSetText(4, "TAILS")
+            TAILS = noentity()
+            TAILS_PAID = 0
+            stoptimer("timeout")
+        }
     }
     
     if(Player == TAILS) {
@@ -339,10 +355,12 @@ if(moneyNoClk()) {
         EGP_SCREEN:egpSetText(4, "TAILS")
         
         #casino vs player
-        EGP_SCREEN:egpSetText(2, "HEADS")
-        HEADS = noentity()
-        HEADS_PAID = 0
-        stoptimer("timeout")
+        if(CASINO) {
+            EGP_SCREEN:egpSetText(2, "HEADS")
+            HEADS = noentity()
+            HEADS_PAID = 0
+            stoptimer("timeout")
+        }
     }
 }
 
@@ -353,10 +371,12 @@ if(moneyTimeout()) {
         EGP_SCREEN:egpSetText(2, "HEADS")
         
         #casino vs player
-        EGP_SCREEN:egpSetText(4, "TAILS")
-        TAILS = noentity()
-        TAILS_PAID = 0
-        stoptimer("timeout")
+        if(CASINO) {
+            EGP_SCREEN:egpSetText(4, "TAILS")
+            TAILS = noentity()
+            TAILS_PAID = 0
+            stoptimer("timeout")
+        }
     }
     
     if(Player == TAILS) {
@@ -364,9 +384,11 @@ if(moneyTimeout()) {
         EGP_SCREEN:egpSetText(4, "TAILS")
         
         #casino vs player
-        EGP_SCREEN:egpSetText(2, "HEADS")
-        HEADS = noentity()
-        HEADS_PAID = 0
-        stoptimer("timeout")
+        if(CASINO) {
+            EGP_SCREEN:egpSetText(2, "HEADS")
+            HEADS = noentity()
+            HEADS_PAID = 0
+            stoptimer("timeout")
+        }
     }
 }
