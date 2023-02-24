@@ -162,11 +162,6 @@ if(first()||dupefinished()) {
                 "max" = 1
             ),
             table(
-                "name" = "G2 Contender",
-                "price" = 2000,
-                "max" = 1
-            ),
-            table(
                 "name" = "G3A3",
                 "price" = 2950,
                 "max" = 1
@@ -213,6 +208,11 @@ if(first()||dupefinished()) {
             table(
                 "name" = "AWM Sniper Rifle",
                 "price" = 6800,
+                "max" = 1
+            ),
+            table(
+                "name" = "G2 Contender",
+                "price" = 2000,
                 "max" = 1
             ),
             table(
