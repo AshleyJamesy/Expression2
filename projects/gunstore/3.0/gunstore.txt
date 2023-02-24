@@ -29,7 +29,7 @@ if(first() || dupefinished()) {
     }
     
     function number table:sItemAvailable() {
-        return SHIPMENTS:exists(This["name", string]:lower()) || 1
+        return SHIPMENTS:exists(This["name", string]:lower())
     }
     
     function table sCartItem(Name:string) {
