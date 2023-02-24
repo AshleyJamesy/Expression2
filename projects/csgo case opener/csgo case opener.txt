@@ -3,7 +3,7 @@
 @persist SPEED:number PRIZE:string COUNT:number
 @persist [BET, MULTIPLIER]:number PLAYER:entity
 
-#include "library/egp/2.0/init"
+#include "library/egp/1.0/init"
 
 if(first() || dupefinished()) {
     BET = 10000
@@ -237,7 +237,7 @@ if(moneyClk()) {
     }
     
     SPEED = 1
-    COUNT = 45
+    COUNT = 25
     EGP_SCREEN:entity():soundPlay("pcasino/other/lever.wav", 0.311, "pcasino/other/lever.wav")
     soundVolume("pcasino/other/lever.wav", 0.5)
 }
