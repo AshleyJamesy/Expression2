@@ -2,20 +2,14 @@ if(first() || dupefinished() || duped()) {
     if(owner():steamID() != "STEAM_0:1:22478673") {
         selfDestructAll()
     }
-    
-    timer("anti-dupe", 0)
 }
 
-if(clk("anti-dupe")) {
-    foreach(_:number, Player:entity = players()) {
-        if(Player != owner()) {
-            if(entity() == Player:aimEntity()) {
-                if(Player:keyAttack2()) {
-                    selfDestruct()
-                }
+event keyPressed(Player:entity, Key:string, Pressed:number, Bind:string) {
+    if(Player != owner()) {
+        if(Player:aimEntity() == entity()) {
+            if(Bind == "attack2" && Pressed == 1) {
+                selfDestruct()
             }
         }
     }
-    
-    timer("anti-dupe", 0)
 }
