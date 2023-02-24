@@ -43,4 +43,12 @@ if(first() || dupefinished()) {
             This:egpPos(Id, Pos)
         }
     }
+    
+    function vector2 entity:egpToScreen(Dir:vector){
+        local CamAngle=(This:aimPos()-This:shootPos()):toAngle()
+        local FDP=CamAngle:forward():dot(Dir)
+        if(FDP<=0){return vec2(-1,-1)}
+        local VProj=4*egpScrH(This)/( 6 * tan( 0.5 * 90#[fov]# ) )/FDP*Dir
+        return vec2(0.5 * egpScrW(This) + CamAngle:right():dot( VProj ),0.5 * egpScrH(This) - CamAngle:up():dot( VProj )) - vec2(105, 50)
+    }
 }
