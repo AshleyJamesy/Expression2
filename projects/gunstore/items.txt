@@ -36,6 +36,10 @@ if(first()||dupefinished()) {
             table(
                 "name" = "melee",
                 "icon" = "j"
+            ),
+            table(
+                "name" = "cart",
+                "icon" = ""
             )
         )
     }
@@ -269,7 +273,7 @@ if(first()||dupefinished()) {
                 "max" = 1
             ),
             table(
-                "name" = "M202 Rocker Lancher",
+                "name" = "M202 Rocker Launcher",
                     "price" = 64000,
                 "max" = 1
             ),
