@@ -29,7 +29,7 @@ if(first() || dupefinished()) {
     }
     
     function number table:sItemAvailable() {
-        return SHIPMENTS:exists(This["name", string]:lower())
+        return SHIPMENTS:exists(This["name", string]:lower()) || 1
     }
     
     function table sCartItem(Name:string) {
@@ -703,10 +703,16 @@ if(first() || dupefinished()) {
                     if(CLIENT == noentity()) {
                         local CartDetails = sCartDetails()
                         local Timeout = 15
-                        if(moneyRequest(Player, CartDetails["total", number] * (1 + TAX), "Advanced Gunstore", Timeout) == 1) {
-                            CLIENT = Player
-                            ElementPurchase:dGetChild("label"):dText("Processing...")
-                            timer("moneyTimeout", Timeout * 1000)
+                        local Total = CartDetails["total", number] * (1 + TAX)
+                        
+                        if(Player:money() >= Total) {
+                            if(moneyRequest(Player, Total, "Advanced Gunstore", Timeout) == 1) {
+                                CLIENT = Player
+                                ElementPurchase:dGetChild("label"):dText("Processing...")
+                                timer("moneyTimeout", Timeout * 1000)
+                            } else {
+                                EGP_SCREEN:entity():soundPlay("declined", 0.427, "buttons/weapon_cant_buy.wav")
+                            }
                         } else {
                             EGP_SCREEN:entity():soundPlay("declined", 0.427, "buttons/weapon_cant_buy.wav")
                         }
