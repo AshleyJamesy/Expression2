@@ -18,8 +18,6 @@ if(first() || dupefinished()) {
     EGP_QUEUED = 0
     EGP_ROOT = table()
     EGP_NAME = table()
-    EGP_REMOVE = table()
-    EGP_NEXT = notable()
     
     #MEMORY:
     function number dNewId() {
@@ -28,12 +26,12 @@ if(first() || dupefinished()) {
             
             if(TOTAL < egpMaxObjects()) {
                 local ID = TOTAL
-                EGP_USED:insertNumber(EGP_USED:indexOf(ID)[2, number] + 1, ID) #ensures sorted
+                EGP_USED:pushNumber(ID)
                 return ID
             }
         } else {
-            local ID = EGP_FREE:shiftNumber()
-            EGP_USED:insertNumber(EGP_USED:indexOf(ID)[2, number] + 1, ID) #ensures sorted
+            local ID = EGP_FREE:removeNumber(1)
+            EGP_USED:pushNumber(ID)
             return ID
         }
         
@@ -41,10 +39,11 @@ if(first() || dupefinished()) {
     }
     
     function void dFreeId(ID:number) {
-        local F = EGP_USED:indexOf(ID)
-        if(F[1, number] > 0) {
-            EGP_USED:removeNumber(F[2, number])
-            EGP_FREE:insertNumber(EGP_FREE:indexOf(ID)[2, number] + 1, ID) #ensures sorted
+        local LkupUsed = invert(EGP_USED)
+        
+        if(LkupUsed:exists(ID:toString())) {
+            EGP_USED:removeNumber(LkupUsed[ID:toString(), number])
+            EGP_FREE:pushNumber(ID)
             EGP_SCREEN:egpRemove(ID)
         }
     }
@@ -115,6 +114,7 @@ if(first() || dupefinished()) {
     function table table:dMetadata() {
         if(!This:exists("metadata")) {
             This["metadata", table] = table(
+                "id" = dNewId(),
                 "path" = "",
                 "position" = vec2(),
                 "size" = vec2(),
@@ -259,6 +259,14 @@ if(first() || dupefinished()) {
         }
     }
     
+    function void table:dPush(Child:table) {
+        local Children = This:dChildren()
+        Children:pushTable(Child)
+        Child:dMetadata(This)
+        Child:dIndex(Children:count())
+        dQueue(Child)
+    }
+    
     function table:dDelete() {
         local Metadata = This:dMetadata()
         Metadata["delete", number] = 1
@@ -266,7 +274,7 @@ if(first() || dupefinished()) {
         try {
             local Parent = This:dParent()
             local ParentChildren = Parent:dChildren()
-            ParentChildren:remove(This:dIndex())
+            ParentChildren:removeTable(This:dIndex())
             
             for(I = This:dIndex(), ParentChildren:count()) {
                 ParentChildren[I, table]:dIndex(I)
@@ -281,9 +289,6 @@ if(first() || dupefinished()) {
             }
         } catch(_) {}
         
-        if(EGP_NEXT == notable()) {
-            EGP_NEXT = EGP_QUEUE[1, table]
-        }
         This:dDirty()
     }
     
@@ -313,24 +318,6 @@ if(first() || dupefinished()) {
     
     function vector2 table:dSize() {
         return This["metadata", table]["size", vector2]
-    }
-    
-    function string table:dText() {
-        return This["text", string]
-    }
-    
-    function table:dText(Text:string) {
-        This["text", string] = Text
-        EGP_SCREEN:egpSetText(This:dId(), Text)
-    }
-    
-    function vector4 table:dColour() {
-        return This["colour", vector4]
-    }
-    
-    function table:dColour(Colour:vector4) {
-        This["colour", vector4] = Colour
-        EGP_SCREEN:egpColor(This:dId(), Colour)
     }
     
     function table table:dProperties() {
@@ -377,6 +364,34 @@ if(first() || dupefinished()) {
         return This:typeids()
     }
     
+    function table:dList(List:table, Method:string, Max:number, Start:number) {
+        if(This:dChildren():count() > List:count()) {
+            for(I = This:dChildren():count(), List:count() + 1, -1) {
+                This:dGetChild(I):dDelete()
+            }
+        }
+        
+        for(I = 1, min(List:count(), Max)) {
+            local ListItem = List[Start + I, table]
+            
+            if(I <= This:dChildren():count()) {
+                local Child = This:dGetChild(I)
+                Method(Child, ListItem, I, List)
+                Child:dDirty()
+            } else {
+                This:dPush(Method(notable(), ListItem, I, List)[table])
+            }
+        }
+    }
+    
+    function table:dList(List:table, Method:string, Max:number) {
+        This:dList(List, Method, Max, 0)
+    }
+    
+    function table:dList(List:table, Method:string) {
+        This:dList(List, Method, List:count(), 0)
+    }
+    
     #RENDERING:
     function void table:dDraw() {
         local Metadata = This:dMetadata()
@@ -393,7 +408,7 @@ if(first() || dupefinished()) {
         local Delete = Metadata["delete", number]
         
         if(Delete) {
-             dFreeId(Id)
+            dFreeId(Id)
         } else {
             #EGP OBJECT ------------------------------------------------------------------------:
             if(!EGP_SCREEN:egpHasObject(Id) || (EGP_SCREEN:egpHasObject(Id) && EGP_SCREEN:egpObjectType(Id) != Type)) {
@@ -582,10 +597,6 @@ if(first() || dupefinished()) {
         "children" = table()
     )
     eEventPush("document.ready", 0, EGP_ROOT)
-    
-    if(EGP_SCREEN:entity():type() == "gmod_wire_egp_emitter") {
-        eEventPush("egp_emitter", 0, table())
-    }
 }
 
 if(eEventClk("document.ready")) {
@@ -602,7 +613,7 @@ event keyPressed(Player:entity, _:string, KeyPressed:number, KeyBind:string) {
                 if(CursorPos:x() >= 0 && CursorPos:x() <= 512 && CursorPos:y() >= 0 && CursorPos:y() <= 512) {
                     if(KeyPressed == 1) {
                         if(KeyBind == "use" || (Player:inVehicle() && KeyBind == "attack")) {
-                            eEventPush("mouse.press", table(
+                            eEventPush("mouse.press", 1, table(
                                 "player" = Player,
                                 "cursor" = EGP_SCREEN:egpCursor(Player)
                             ))
@@ -618,7 +629,7 @@ if(EGP_SCREEN:entity():type() != "gmod_wire_egp_emitter") {
     if(EGP_USER & ~EGP_USER) {
         if(!dRendering()) {
             if(EGP_USER:isValid() && EGP_USER:isPlayer()) {
-                eEventPush("mouse.press", table(
+                eEventPush("mouse.press", 1, table(
                     "player" = EGP_USER,
                     "cursor" = EGP_SCREEN:egpCursor(EGP_USER)
                 ))
