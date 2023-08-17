@@ -441,10 +441,6 @@ if(first() || dupefinished()) {
             
             local Parent = This:dParent()
             This["position", vector2] = Parent["position", vector2] + vec2(X, Y)
-            
-            #offset final position from parent's center
-            X -= ParentSize:x() / 2
-            Y -= ParentSize:y() / 2
         } else {
             if(TypeIds["position", string] == "xv2") {
                 local Position = Properties["position", vector2]
