@@ -1,6 +1,6 @@
 @persist HTTP_QUEUE:table [HTTP_ID, HTTP_QUEUED]:number
 
-#include "library/event/1.0/init"
+#include "library/event/2.0/event"
 
 if(first() || dupefinished()) {
     runOnFile(1)

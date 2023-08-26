@@ -1,0 +1,81 @@
+@persist EVENT_HASH:string 
+@persist EVENT_ID:number 
+@persist [EVENT_TIMERS, EVENT_QUEUES]:table
+
+#include "library/number"
+#include "library/string"
+#include "library/array"
+#include "library/table"
+
+if(first() || dupefinished()) {
+    EVENT_HASH = hashNoComments():toString()
+    EVENT_ID = 0
+    EVENT_TIMERS = table()
+    EVENT_QUEUES = table()
+    
+    function table evCreateQueue(Name:string) {
+        if(!EVENT_QUEUES:exists(Name)) {
+            EVENT_QUEUES[Name, table] = table()
+        }
+        return EVENT_QUEUES[Name, table]
+    }
+    
+    function table evQueue(Name:string) {
+        return EVENT_QUEUES[Name, table]
+    }
+    
+    #TODO: get queue name from table
+    function number table:evQueuePoll() {
+        local Name = "queue"
+        return dsClk() && dsClkName() == EVENT_HASH + ":event." + Name
+    }
+    
+    function table:evPush(Type:string, Payload:table, Delay:number) {
+        if(Delay > 0) {
+            local TimerEvent = table(
+                "queue" = This,
+                "type" = Type,
+                "payload" = Payload
+            )
+            
+            local TimerId = EVENT_HASH + ":event.timer-" + EVENT_ID
+            EVENT_ID++
+            EVENT_TIMERS[TimerId, table] = TimerEvent
+            timer(TimerId, Delay)
+        } else {
+            if(This:count() == 0) {
+                #TODO: need to be able send name of the queue
+                dsSendDirect(EVENT_HASH + ":event.queue", entity(), table())
+            }
+            
+            This:pushTable(table(
+                "type" = Type,
+                "payload" = Payload 
+            ))
+        }
+    }
+    
+    function table:evPush(Type:string, Payload:table) {
+        This:evPush(Type, Payload, 0)
+    }
+    
+    function table:evPushNext(Type:string, Payload:table) {
+        This:insertTable(1, table(
+            "type" = Type,
+            "payload" = Payload 
+        ))
+    }
+}
+
+if(clkName():startsWith(EVENT_HASH + ":event.timer-")) {
+    local TimerId = clkName()
+    if(EVENT_TIMERS:exists(TimerId)) {
+        local TimerEvent = EVENT_TIMERS[TimerId, table]
+        EVENT_TIMERS:remove(TimerId)
+        
+        local Queue = TimerEvent["queue", table]
+        local Type = TimerEvent["type", string]
+        local Payload = TimerEvent["payload", table]
+        Queue:evPush(Type, Payload)
+    }
+}
