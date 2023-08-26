@@ -1,0 +1,117 @@
+@persist EGP_EVENT_HASH:string
+@persist EGP_EVENT_QUEUE:table
+@persist EGP_EVENT_TIMERS:table EGP_EVENT_ID:number 
+@persist EGP_EVENT_POLL:number
+
+#include "library/string"
+
+EGP_EVENT_INDEX = 1
+EGP_EVENT_CLK = 0
+EGP_EVENT_NAME = ""
+EGP_EVENT_DATA = table()
+
+if(first() || dupefinished()) {
+    EGP_EVENT_HASH = hashNoComments() + ":egp"
+    
+    function void egpEventClear() {
+        EGP_EVENT_QUEUE = table()
+        EGP_EVENT_TIMERS = table()
+        EGP_EVENT_INDEX = 1
+        EGP_EVENT_CLK = 0
+        EGP_EVENT_NAME = ""
+        EGP_EVENT_DATA = table()
+    }
+    
+    function number egpEventPollClk() {
+        local Clk = clk(EGP_EVENT_HASH + ".poll")
+        if(Clk) {
+            EGP_EVENT_POLL = 0
+        }
+        return Clk
+    }
+    
+    function void egpEventPoll() { 
+        if(EGP_EVENT_POLL == 0) {
+            timer(EGP_EVENT_HASH + ".poll", 0)
+        }
+        EGP_EVENT_POLL = 1
+    }
+    
+    function table egpEventQueue() {
+        return EGP_EVENT_QUEUE
+    }
+    
+    function void egpEvent(Name:string, Data:table, Index:number) {
+        if(egpEventQueue():count() == 0) {
+            egpEventPoll()
+        }
+        
+        egpEventQueue():insertTable(Index, table(
+            "name" = Name,
+            "data" = Data
+        ))
+    }
+    
+    function void egpEvent(Name:string, Data:table) {
+        egpEvent(Name, Data, EGP_EVENT_INDEX)
+    }
+    
+    function void egpEvent(Name:string) {
+        egpEvent(Name, table())
+    }
+    
+    function void egpEventDelay(Name:string, Data:table, Delay:number) {
+        if(Delay > 0) {
+            local TimerEvent = table(
+                "name" = Name,
+                "data" = Data
+            )
+            
+            local TimerId = EGP_EVENT_HASH + ".timer-" + EGP_EVENT_ID
+            EGP_EVENT_ID++
+            EGP_EVENT_TIMERS[TimerId, table] = TimerEvent
+            timer(TimerId, Delay)
+        } else {
+            egpEvent(Name, Data)
+        }
+    }
+    
+    function void egpEventDelay(Name:string, Delay:number) {
+        egpEventDelay(Name, table(), Delay)
+    }
+    
+    function number egpEventClk() {
+        return EGP_EVENT_CLK == 1
+    }
+    
+    function string egpEventClkName() {
+        return egpEventClk() ? EGP_EVENT_NAME : ""
+    }
+    
+    function table egpEventData() {
+        return egpEventClk() ? EGP_EVENT_DATA : table()
+    }
+    
+    function number egpEventClk(Name:string) {
+        return egpEventClk() && egpEventClkName() == Name
+    }
+    
+    function void table:egpProcessEvent() {
+        EGP_EVENT_INDEX = egpEventQueue():count() + 1
+        EGP_EVENT_CLK = 1
+        EGP_EVENT_NAME = This["name", string]
+        EGP_EVENT_DATA = This["data", table]
+    }
+}
+
+if(clkName():startsWith(EGP_EVENT_HASH + ".timer-")) {
+    local TimerId = clkName()
+    if(EGP_EVENT_TIMERS:exists(TimerId)) {
+        local TimerEvent = EGP_EVENT_TIMERS[TimerId, table]
+        EGP_EVENT_TIMERS:remove(TimerId)
+        
+        local Name = TimerEvent["name", string]
+        local Data = TimerEvent["data", table]
+        egpEvent(Name, Data)
+    }
+}

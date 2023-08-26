@@ -1,0 +1,138 @@
+@inputs [EGP_KEYBOARD_MEMORY, EGP_KEYBOARD_INUSE]:number EGP_KEYBOARD:wirelink
+@persist EGP_HUD_OPEN:number EGP_HUD_OPENERS:table
+
+##include "library/egp"
+##include "library/egp/5.0/event"
+
+if(first() || dupefinished()) {
+    function void egpInputClear() {
+        EGP_HUD_OPEN = 0
+    }
+    
+    function void egpInputEvent(Name:string, Data:table) {
+        egpEvent(Name, Data, 1)
+    }
+    
+    function void egpInputEvent(Name:string) {
+        egpEvent(Name, table())
+    }
+    
+    function void egpMousePressEvent(User:entity, Position:vector2) {
+        egpInputEvent("mouse.press", table(
+            "user" = User,
+            "cursor" = Position
+        ))
+    }
+    
+    function void egpMousePressEvent(User:entity) {
+        egpMousePressEvent(User, egpScreen():egpCursor(User))
+    }
+    
+    function void egpKeyPressEvent(User:entity, Key:number, Keys:array, Output:string) {
+        egpInputEvent("keyboard.press", table(
+            "user" = User,
+            "cursor" = egpScreen():egpCursor(User),
+            "key" = Key,
+            "keys" = Keys,
+            "output" = Output
+        ))
+    }
+    
+    function void egpKeyPressEvent(User:entity, Key:number, Keys:array) {
+        egpKeyPressEvent(User, Key, Keys, "")
+    }
+    
+    function void egpKeyPressEvent(User:entity, Key:number) {
+        egpKeyPressEvent(User, Key, array(Key), "")
+    }
+    
+    function number egpKeyboardInUse() {
+        return EGP_KEYBOARD["InUse", number]
+    }
+    
+    function void egpKeyboardClear() {
+        EGP_KEYBOARD["Reset Output String", number] = 1
+    }
+    
+    function number egpHudOpen() {
+        return EGP_HUD_OPEN
+    }
+    
+    function number egpHudOpen() {
+        return EGP_HUD_OPEN
+    }
+    
+    function void egpHudOpen(Open:number) {
+        EGP_HUD_OPEN = Open
+        
+        if(EGP_HUD_OPEN) {
+            egpEvent("hud.open")
+        } else {
+            egpEvent("hud.close")
+        }
+    }
+}
+
+if(EGP_KEYBOARD_INUSE) {
+    if(EGP_KEYBOARD_MEMORY & ~EGP_KEYBOARD_MEMORY) {
+        egpKeyPressEvent(EGP_KEYBOARD["User", entity], EGP_KEYBOARD_MEMORY, EGP_KEYBOARD["ActiveKeys", array], EGP_KEYBOARD["Output", string])
+    }
+    
+    if(~EGP_KEYBOARD_INUSE) {
+        if(EGP_KEYBOARD_INUSE) {
+            egpInputEvent("keyboard.enter", table(
+                "player" = EGP_KEYBOARD["User", entity]
+            ))
+        } else {
+            egpInputEvent("keyboard.exit")
+        }
+        egpKeyboardClear()
+    }
+} else {
+    if(egpUserChanged()) {
+        egpMousePressEvent(egpUser())
+    }
+}
+
+event keyPressed(User:entity, Key:string, KeyPressed:number, KeyBind:string) {
+    if(egpScreen():entity():type() == "gmod_wire_egp_hud") {
+        foreach(K:number, Player:entity = egpScreen():egpConnectedUsers()) {
+            if(User != Player) {
+                continue
+            }
+            
+            if(Key == "c") {
+                if(KeyPressed) {
+                    if(EGP_HUD_OPENERS:values():max() == 0) {
+                        egpHudOpen(1)
+                    }
+                    EGP_HUD_OPENERS[User:steamID(), number] = 1
+                } else {
+                    EGP_HUD_OPENERS[User:steamID(), number] = 0
+                    if(EGP_HUD_OPENERS:values():max() == 0) {
+                        egpHudOpen(0)
+                    }
+                }
+            }
+            
+            if(KeyPressed) {
+                if(egpHudOpen()) {
+                    if(User:weapon():type() == "keys" && Key == "mouse_left" && KeyPressed) {
+                        egpMousePressEvent(User, User:egpToScreen(User:eye(), 75))
+                    }
+                }
+            }
+        }
+    } elseif(egpScreen():entity():type() == "gmod_wire_egp_emitter") {
+        if(!EGP_KEYBOARD_INUSE && KeyPressed) {
+            if(User:pos():distance(egpScreen():entity():pos()) <= 150) {
+                local CursorPos = egpScreen():egpCursor(User)
+                if(inrange(CursorPos:x(), 0, 512) && inrange(CursorPos:y(), 0, 512)) {
+                    if(KeyBind == "use" || (User:inVehicle() && KeyBind == "attack")) {
+                        egpMousePressEvent(User)
+                    }
+                }
+            }
+        }
+    }
+}
