@@ -1,6 +1,10 @@
 @inputs EGP_SCREEN:wirelink EGP_USER:entity
 
 if(first() || dupefinished()) {
+    function wirelink egpScreen() {
+        return EGP_SCREEN
+    }
+    
     function void egpWire() {
         findIncludePlayerProps(owner())
         findByClass("gmod_wire_egp*")
@@ -8,7 +12,7 @@ if(first() || dupefinished()) {
         
         if(find()) {   
             if(find():owner() == owner()) {
-                if(!EGP_SCREEN:entity()) {
+                if(!egpScreen():entity()) {
                     #ifdef entity:createWire(entity, string, string)
                     
                     local EGP = find()
@@ -19,36 +23,33 @@ if(first() || dupefinished()) {
                 }
             }
         }
+    }
+    
+    function number egpScreenChanged() {
+        return EGP_SCREEN & ~EGP_SCREEN || ((first() || dupefinished()) && egpScreen():entity():isValid())
+    }
+    
+    function number egpUserChanged() {
+        return EGP_USER & ~EGP_USER
+    }
+    
+    function entity egpUser() {
+        return EGP_USER
+    }
+    
+    function vector2 entity:egpToScreen(Dir:vector, Fov:number){
+        local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
+        local FDP = CamAngle:forward():dot(Dir)
         
-        EGP_SCREEN:egpClear()
-        EGP_SCREEN:egpDrawTopLeft(1)
-    }
-    
-    function vector2 wirelink:egpPosChild(Id:number) {
-        local ParentId = This:egpParent(Id)
-        if(ParentId > 0) {
-            local Size = This:egpSize(ParentId) / 2
-            return This:egpPos(Id) + Size
-        } else {
-            return This:egpPos(Id)
+        if(FDP <= 0) {
+            return vec2(-1, -1)
         }
-    }
-    
-    function void wirelink:egpPosChild(Id:number, Pos:vector2) {
-        local ParentId = This:egpParent(Id)
-        if(ParentId > 0) {
-            local Size = This:egpSize(ParentId) / 2
-            This:egpPos(Id, Pos - Size)
-        } else {
-            This:egpPos(Id, Pos)
-        }
-    }
-    
-    function vector2 entity:egpToScreen(Dir:vector){
-        local CamAngle=(This:aimPos()-This:shootPos()):toAngle()
-        local FDP=CamAngle:forward():dot(Dir)
-        if(FDP<=0){return vec2(-1,-1)}
-        local VProj=4*egpScrH(This)/( 6 * tan( 0.5 * 90#[fov]# ) )/FDP*Dir
-        return vec2(0.5 * egpScrW(This) + CamAngle:right():dot( VProj ),0.5 * egpScrH(This) - CamAngle:up():dot( VProj )) - vec2(105, 50)
+        
+        local VProj = 4 * egpScrH(This) / (6 * tan(0.5 * Fov)) / FDP * Dir
+        
+        return vec2(
+            0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
+            0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
+        )
     }
 }
