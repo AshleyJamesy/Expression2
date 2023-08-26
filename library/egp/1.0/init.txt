@@ -284,43 +284,43 @@ if(first() || dupefinished()) {
     function table table:dProperties() {
         local TypeIds = This:typeids()
         
-        local Type = This:dProperty(TypeIds, "type", "box", 0)
-        This:dProperty(TypeIds, "name", Type, 0)
+        local Type = This:setProperty(TypeIds, "type", "box", 0)
+        This:setProperty(TypeIds, "name", Type, 0)
         
         if(!This:exists("children") || TypeIds["children", string] != "t") {
             This["children", table] = table()
         }
         
         if(!This:exists("position")) {
-            This:dProperty(TypeIds, "position", vec2(), 0)
+            This:setProperty(TypeIds, "position", vec2(), 0)
         } else {
             if(TypeIds["position", string] == "t") {
-                This:dProperty(TypeIds, "position", table("x" = 0, "y" = 0), 0)
+                This:setProperty(TypeIds, "position", table("x" = 0, "y" = 0), 0)
             } elseif(TypeIds["position", string] != "xv2") {
-                This:dProperty(TypeIds, "position", vec2(), 0)
+                This:setProperty(TypeIds, "position", vec2(), 0)
             }
         }
         
         if(!This:exists("size")) {
-            This:dProperty(TypeIds, "size", table("width" = "100%", "height" = "100%"), 0)
+            This:setProperty(TypeIds, "size", table("width" = "100%", "height" = "100%"), 0)
         } else {
             if(TypeIds["size", string] == "t") {
-                This:dProperty(TypeIds, "size", table("width" = "100%", "height" = "100%"), 0)
+                This:setProperty(TypeIds, "size", table("width" = "100%", "height" = "100%"), 0)
             } elseif(TypeIds["size", string] != "xv2") {
-                This:dProperty(TypeIds, "size", vec2(), 0)
+                This:setProperty(TypeIds, "size", vec2(), 0)
             }
         }
         
-        This:dProperty(TypeIds, "colour", vec4(), 0)
-        This:dProperty(TypeIds, "angle", 0, 0)
-        This:dProperty(TypeIds, "rounded", 0, Type != "box")
-        This:dProperty(TypeIds, "outline", 0, Type != "box" && Type != "circle")
-        This:dProperty(TypeIds, "thickness", 0, Type != "box" && Type != "circle")
-        This:dProperty(TypeIds, "material", "", Type != "box")
+        This:setProperty(TypeIds, "colour", vec4(), 0)
+        This:setProperty(TypeIds, "angle", 0, 0)
+        This:setProperty(TypeIds, "rounded", 0, Type != "box")
+        This:setProperty(TypeIds, "outline", 0, Type != "box" && Type != "circle")
+        This:setProperty(TypeIds, "thickness", 0, Type != "box" && Type != "circle")
+        This:setProperty(TypeIds, "material", "", Type != "box")
         
-        This:dProperty(TypeIds, "text", "", Type != "text")
-        This:dProperty(TypeIds, "font", table("font" = "", "size" = 18), Type != "text")
-        This:dProperty(TypeIds, "align", vec2(0,0), Type != "text")
+        This:setProperty(TypeIds, "text", "", Type != "text")
+        This:setProperty(TypeIds, "font", table("font" = "", "size" = 18), Type != "text")
+        This:setProperty(TypeIds, "align", vec2(0,0), Type != "text")
         
         return This:typeids()
     }
@@ -421,10 +421,6 @@ if(first() || dupefinished()) {
             
             local ParentMetadata = This:dParent():dMetadata()
             Metadata["position", vector2] = ParentMetadata["position", vector2] + vec2(X, Y)
-            
-            #offset final position from parent's center
-            X -= ParentSize:x() / 2
-            Y -= ParentSize:y() / 2
         } else {
             if(TypeIds["position", string] == "xv2") {
                 local Position = This["position", vector2]
