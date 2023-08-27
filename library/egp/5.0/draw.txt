@@ -437,7 +437,9 @@ if(first() || dupefinished()) {
         local AX = 0
         local AY = 0
         if(TypeIds["anchor", string] == "xv2") {
-            Anchor = Properties["anchor", vector2]
+            local Anchor = Properties["anchor", vector2]
+            AX = Anchor:x()
+            AY = Anchor:y()
         } elseif(TypeIds["anchor", string] == "t") {
             local AnchorData = Properties["anchor", table]
             local AnchorTypeIds = AnchorData:typeids()

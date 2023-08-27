@@ -12,6 +12,7 @@ EGP_EVENT_DATA = table()
 
 if(first() || dupefinished()) {
     EGP_EVENT_HASH = hashNoComments() + ":egp"
+    EGP_EVENT_ID = 0
     
     function void egpEventClear() {
         EGP_EVENT_QUEUE = table()

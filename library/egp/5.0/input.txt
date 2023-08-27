@@ -1,12 +1,13 @@
 @inputs [EGP_KEYBOARD_MEMORY, EGP_KEYBOARD_INUSE]:number EGP_KEYBOARD:wirelink
 @persist EGP_HUD_OPEN:number EGP_HUD_OPENERS:table
 
-##include "library/egp"
+#include "library/egp"
 ##include "library/egp/5.0/event"
 
 if(first() || dupefinished()) {
     function void egpInputClear() {
         EGP_HUD_OPEN = 0
+        EGP_HUD_OPENERS = table()
     }
     
     function void egpInputEvent(Name:string, Data:table) {
@@ -96,7 +97,7 @@ if(EGP_KEYBOARD_INUSE) {
 
 event keyPressed(User:entity, Key:string, KeyPressed:number, KeyBind:string) {
     if(egpScreen():entity():type() == "gmod_wire_egp_hud") {
-        foreach(K:number, Player:entity = egpScreen():egpConnectedUsers()) {
+        foreach(_:number, Player:entity = egpScreen():egpConnectedUsers()) {
             if(User != Player) {
                 continue
             }
