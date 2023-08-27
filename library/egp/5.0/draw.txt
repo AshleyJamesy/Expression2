@@ -553,7 +553,7 @@ if(first() || dupefinished()) {
                     }
                     
                     if(Properties:exists("children")) {
-                        for(I = Properties["children", table]:count(), 1, -1) {
+                        for(I = 1, Properties["children", table]:count()) {
                             egpDrawNext("add", table("target" = Target, "properties" = Properties["children", table][I, table]))
                         }
                         Properties:remove("children")
