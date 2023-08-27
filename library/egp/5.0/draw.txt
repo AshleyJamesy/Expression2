@@ -268,6 +268,10 @@ if(first() || dupefinished()) {
         }
     }
     
+    function table:egpListItem(Method:string, Item:table) {
+        Method(This, Item, This["index", number], notable(), This:egpPos():y(), This:egpSize():y())[table]
+    }
+    
     function void table:egpDrawProperties() {
         local TypeIds = This:typeids()
         
