@@ -140,21 +140,19 @@ if(first() || dupefinished()) {
     cItem("Knife", vec(255,175,0), "vgui/hud/m9k_knife", vec2(0.7, 0.7), "rare", 0.0025, 10.0) #0.25%
 }
 
-if(egpEventClk("mouse.press")) {
-    local Event = egpEventData()
-    local User = Event["user", entity]
-    local Cursor = Event["cursor", vector2]
-    
-    local ElementBuy = egpGet("body.buy")
-    if(ElementBuy:egpMouseOver(Cursor)) {
-        if(COUNT == 0 && PLAYER == noentity()) {
+if(COUNT == 0 && PLAYER == noentity()) {
+    if(egpEventClk("mouse.press")) {
+        local Event = egpEventData()
+        local User = Event["user", entity]
+        local Cursor = Event["cursor", vector2]
+        
+        local ElementBuy = egpGet("body.buy")
+        if(ElementBuy:egpMouseOver(Cursor)) {
             if(moneyRequest(User, BET * MULTIPLIER, 15, "Open Case")) {
                 PLAYER = User
             }
         }
-    }
-    
-    if(COUNT == 0 && PLAYER == noentity()) {
+        
         local ElementScroll = egpGet("body.scroll")
         if(ElementScroll:egpMouseOver(Cursor)) {
             local ElementScrollButton = ElementScroll:egpChild("button")
@@ -189,6 +187,7 @@ if(egpEventClk("mouse.press")) {
         }
     }
 }
+
 
 if(moneyClk()) {
     if(PLAYER == owner()) {
