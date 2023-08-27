@@ -2,6 +2,8 @@
 @persist EGP_EVENT_QUEUE:table
 @persist EGP_EVENT_TIMERS:table EGP_EVENT_ID:number 
 @persist EGP_EVENT_POLL:number
+@persist EGP_EVENT_TICK:number
+@persist TICK:number
 
 #include "library/string"
 
@@ -9,6 +11,8 @@ EGP_EVENT_INDEX = 1
 EGP_EVENT_CLK = 0
 EGP_EVENT_NAME = ""
 EGP_EVENT_DATA = table()
+EGP_EVENT_TICK = 0
+TICK++
 
 if(first() || dupefinished()) {
     EGP_EVENT_HASH = hashNoComments() + ":egp"
@@ -21,6 +25,8 @@ if(first() || dupefinished()) {
         EGP_EVENT_CLK = 0
         EGP_EVENT_NAME = ""
         EGP_EVENT_DATA = table()
+        EGP_EVENT_TICK = 0
+        TICK = 0
     }
     
     function number egpEventPollClk() {
@@ -49,7 +55,8 @@ if(first() || dupefinished()) {
         
         egpEventQueue():insertTable(Index, table(
             "name" = Name,
-            "data" = Data
+            "data" = Data,
+            "tick" = TICK
         ))
     }
     
@@ -93,6 +100,14 @@ if(first() || dupefinished()) {
         return egpEventClk() ? EGP_EVENT_DATA : table()
     }
     
+    function number egpTick() {
+        return TICK
+    }
+    
+    function number egpEventTick() {
+        return egpEventClk() ? EGP_EVENT_TICK : 0
+    }
+    
     function number egpEventClk(Name:string) {
         return egpEventClk() && egpEventClkName() == Name
     }
@@ -102,6 +117,7 @@ if(first() || dupefinished()) {
         EGP_EVENT_CLK = 1
         EGP_EVENT_NAME = This["name", string]
         EGP_EVENT_DATA = This["data", table]
+        EGP_EVENT_TICK = This["tick", number]
     }
 }
 
