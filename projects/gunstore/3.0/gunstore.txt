@@ -21,7 +21,7 @@ if(first() || dupefinished()) {
     }
     
     function number table:sItemPrice() {
-        local Price = roundNearest(This["price", number] * 2, 500)
+        local Price = roundNearest(This["price", number], 500)
         if(Price > 10000) {
             Price = roundNearest(Price, 1000)
         }
@@ -29,7 +29,7 @@ if(first() || dupefinished()) {
     }
     
     function number table:sItemAvailable() {
-        return SHIPMENTS:exists(This["name", string]:lower())
+        return SHIPMENTS:exists(This["name", string]:lower()) || 1
     }
     
     function table sCartItem(Name:string) {
@@ -507,7 +507,7 @@ if(first() || dupefinished()) {
                                 "width" = "150",
                                 "height" = "25"
                             ),
-                            "text" = "$" + (CartDetails["total", number] * (1 + 0.4)):comma(),
+                            "text" = "$" + (CartDetails["total", number] * (1 + TAX)):comma(),
                             "align" = vec2(2, 0)
                         ),
                         table(
