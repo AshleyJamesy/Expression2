@@ -668,7 +668,9 @@ if(first() || dupefinished()) {
     }
 
     egpWire()
-    
+}
+
+if(egpScreenChanged()) {
     EGP_SCREEN:egpClear()
     EGP_SCREEN:egpDrawTopLeft(1)
     
