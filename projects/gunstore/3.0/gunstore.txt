@@ -21,10 +21,10 @@ if(first() || dupefinished()) {
     }
     
     function number table:sItemPrice() {
-        local Price = roundNearest(This["price", number], 500)
-        if(Price > 10000) {
-            Price = roundNearest(Price, 1000)
-        }
+        #local Price = roundNearest(This["price", number], 500)
+        #if(Price > 10000) {
+        #    Price = roundNearest(Price, 1000)
+        #}
         return Price
     }
     
