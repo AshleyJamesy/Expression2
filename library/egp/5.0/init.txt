@@ -12,6 +12,8 @@ if(first() || dupefinished()) {
 }
 
 if(egpScreenChanged()) {
+    EGP_DEBUG = 0
+    
     egpScreen():egpClear()
     egpScreen():egpDrawTopLeft(1)
     
@@ -20,6 +22,7 @@ if(egpScreenChanged()) {
     
     if(egpScreen():entity():type() == "gmod_wire_egp_hud") {
         egpDrawClear(egpScrW(owner()), egpScrH(owner()))
+        egpInputEvent("hud.close")
     } else {
         egpDrawClear(512, 512)
     }
@@ -27,15 +30,24 @@ if(egpScreenChanged()) {
     egpInputEvent("document.ready")
 }
 
-if(egpEventPollClk()) {
+if(egpEventPollClk() || EGP_DEBUG) {
     if(egpDrawQueue():count() > 0) {
-        while(egpDrawQueue():count() > 0 && perf(99)) {
-            egpDrawQueue():popTable():egpProcessDraw()
+        if(EGP_DEBUG) {
+            if(egpDrawQueue():count() > 0) {
+                local Event = egpDrawQueue():popTable()
+                Event:egpProcessDraw()
+            }
+        } else {
+            while(egpDrawQueue():count() > 0 && perf(99)) {
+                local Event = egpDrawQueue():popTable()
+                Event:egpProcessDraw()
+            }
+            egpEventPoll() #poll again
         }
-        egpEventPoll() #poll again
     } else {
         if(egpEventQueue():count() > 0) {
-            egpEventQueue():popTable():egpProcessEvent()
+            local Event = egpEventQueue():popTable()
+            Event:egpProcessEvent()
             if(egpEventQueue():count() > 0) {
                 egpEventPoll()  #poll again
             }

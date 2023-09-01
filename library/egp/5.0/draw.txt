@@ -6,6 +6,8 @@
 @persist EGP_PATH:table
 @persist EGP_BODY:table
 @persist EGP_FONT:string
+@persist EGP_DEBUG:number
+@persist EGP_DEBUG_ID:number
 
 #include "library/table"
 #include "library/egp"
@@ -23,6 +25,8 @@ if(first() || dupefinished()) {
     EGP_PATH = table()
     EGP_BODY = table()
     EGP_FONT = ""
+    EGP_DEBUG = 0
+    EGP_DEBUG_ID = 0
     
     #MEMORY: --------------------------------------------------------------------------------------------------------------------
     function number egpNew() {
@@ -122,6 +126,10 @@ if(first() || dupefinished()) {
         return EGP_PATH[Path, table]
     }
     
+    function number egpExists(Path:string) {
+        return EGP_PATH:exists(Path)
+    }
+    
     function table table:egpParent() {
         if(!This:exists("parent")) {
             error("element has no parent")
@@ -175,6 +183,10 @@ if(first() || dupefinished()) {
         return Children[Name, table]
     }
     
+    function number table:egpChildExists(Name:string) {
+        return This["children", table]["name", table]:exists(Name)
+    }
+    
     function table table:egpChildFirst() {
         try {
             return This:egpChild(1)
@@ -198,12 +210,43 @@ if(first() || dupefinished()) {
     
     function void table:egpPos(Position:vector2) {
         This["properties", table]["position", vector2] = Position
-        egpDrawNext("draw", table("target" = This, "children" = 0))
+        EGP_SCREEN:egpPos(This:egpId(), Position)
     }
     
     function void table:egpPos(Position:table) {
         This["properties", table]["position", table] = Position
-        egpDrawNext("draw", table("target" = This, "children" = 0))
+        
+        local ParentSize = vec2(EGP_SCREEN_WIDTH, EGP_SCREEN_HEIGHT)
+        ParentSize = ParentSize
+        try {
+            ParentSize = EGP_SCREEN:egpSize(This:egpParent():egpId())
+        } catch(_) {}
+        
+        local PositionData = Position
+        local PositionTypeIds = PositionData:typeids()
+        local X = PositionTypeIds["x", string] == "n" ? egpPixels(PositionData["x", number], ParentSize:x()) : egpPixels(PositionData["x", string], ParentSize:x())
+        local Y = PositionTypeIds["y", string] == "n" ? egpPixels(PositionData["y", number], ParentSize:y()) : egpPixels(PositionData["y", string], ParentSize:y())
+        
+        EGP_SCREEN:egpPos(This:egpId(), vec2(X, Y) - This["anchor", vector2])
+    }
+    
+    function void table:egpAnchor(Anchor:vector2) {
+        This["properties", table]["anchor", vector2] = Anchor
+        This["anchor", vector2] = Anchor
+        This:egpPos(EGP_SCREEN:egpPos(This:egpId()))
+    }
+    
+    function void table:egpAnchor(Anchor:table) {
+        This["properties", table]["anchor", table] = Anchor
+        
+        local Id = This:egpId()
+        local Size = EGP_SCREEN:egpSize(This:egpId())
+        local AnchorTypeIds = Anchor:typeids()
+        local AX = AnchorTypeIds["x", string] == "n" ? egpPixels(Anchor["x", number], Size:x()) : egpPixels(Anchor["x", string], Size:x())
+        local AY = AnchorTypeIds["y", string] == "n" ? egpPixels(Anchor["y", number], Size:y()) : egpPixels(Anchor["y", string], Size:y())
+        
+        This["anchor", vector2] = vec2(AX, AY)
+        This:egpPos(EGP_SCREEN:egpPos(Id))
     }
     
     function vector2 table:egpSize() {
@@ -221,8 +264,7 @@ if(first() || dupefinished()) {
     }
     
     function void table:egpColour(Colour:vector4) {
-        local Id = This["id", number]
-        EGP_SCREEN:egpColor(Id, Colour)
+        EGP_SCREEN:egpColor(This:egpId(), Colour)
         This["properties", table]["colour", vector4] = Colour
     }
     
@@ -231,8 +273,7 @@ if(first() || dupefinished()) {
     }
     
     function void table:egpText(Text:string) {
-        local Id = This["id", number]
-        EGP_SCREEN:egpSetText(Id, Text)
+        EGP_SCREEN:egpSetText(This:egpId(), Text)
         This["properties", table]["text", string] = Text
     }
     
@@ -240,15 +281,32 @@ if(first() || dupefinished()) {
         return This["properties", table]["text", string]
     }
     
+    function void table:egpMaterial(Material:string) {
+        EGP_SCREEN:egpMaterial(This:egpId(), Material)
+        This["properties", table]["material", string] = Material
+    }
+    
+    function string table:egpMaterial() {
+        return This["properties", table]["material", string]
+    }
+    
     function void table:egpAdd(Properties:table) {
         egpDrawNext("add", table("target" = This, "properties" = Properties))
     }
     
     function void table:egpRemove() {
+        if(!EGP_DEBUG) {
+            EGP_SCREEN:egpPos(This:egpId(), vec2(9999,9999))
+        }
         egpDrawNext("remove", table("target" = This))
     }
     
     function table:egpList(List:table, Method:string, Start:number, Max:number, Spacing:number) {
+        local Hide = This:egpChildren():count() == 0
+        if(Hide && !EGP_DEBUG) {
+            EGP_SCREEN:egpPos(This:egpId(), vec2(9999, 99999))
+        }
+        
         if(This:egpChildren():count() > List:count()) {
             for(I = This:egpChildren():count(), List:count() + 1, -1) {
                 This:egpChild(I):egpRemove()
@@ -265,6 +323,10 @@ if(first() || dupefinished()) {
             } else {
                 This:egpAdd(Method(notable(), ListItem, I, List, Y, Height)[table])
             }
+        }
+        
+        if(Hide && !EGP_DEBUG) {
+            egpDrawNext("draw", table("target" = This, "children" = 0)) #move back to pos
         }
     }
     
@@ -451,7 +513,28 @@ if(first() || dupefinished()) {
             AY = AnchorTypeIds["y", string] == "n" ? egpPixels(AnchorData["y", number], H) : egpPixels(AnchorData["y", string], H)
         }
         
+        This["anchor", vector2] = vec2(AX, AY)
         EGP_SCREEN:egpPos(Id, vec2(X, Y) - vec2(AX, AY))
+        
+        if(EGP_DEBUG_ID > 0) {
+            EGP_SCREEN:egpBoxOutline(EGP_DEBUG_ID, vec2(EGP_SCREEN:egpGlobalPos(Id)), vec2(W, H))
+            EGP_SCREEN:egpColor(EGP_DEBUG_ID, vec(255, 0, 0))
+            EGP_SCREEN:egpOrderAbove(EGP_DEBUG_ID, Id)
+        }
+        
+        #[
+        if(TypeIds["position", string] == "xv2") {
+            This:egpPos(Properties["position", vector2])
+        } elseif(TypeIds["position", string] == "t") {
+            This:egpPos(Properties["position", table])
+        }
+        
+        if(TypeIds["anchor", string] == "xv2") {
+            This:egpAnchor(Properties["anchor", vector2])
+        } elseif(TypeIds["anchor", string] == "t") {
+            This:egpAnchor(Properties["anchor", table])
+        }
+        ]#
         
         #COLOUR ------------------------------------------------------------------------:
         local Colour = Properties["colour", vector4]
@@ -495,7 +578,9 @@ if(first() || dupefinished()) {
         EGP_DRAW_INDEX = 1
         EGP_DRAW_QUEUE = table()
         EGP_PATH = table()
-        
+        if(EGP_DEBUG) {
+            EGP_DEBUG_ID = egpNew()
+        }
         EGP_SCREEN_WIDTH = Width
         EGP_SCREEN_HEIGHT = Height
         
@@ -565,8 +650,13 @@ if(first() || dupefinished()) {
                         Properties:remove("children")
                     }
                     
-                    EGP_SCREEN:egpPos(Target:egpId(), vec2(9999,9999))
-                    egpDrawNext("draw", table("target" = Target, "children" = 0))
+                    
+                    #only do this if no debugging
+                    if(!EGP_DEBUG) {
+                        #move the object far away so it's not seen being rendered
+                        EGP_SCREEN:egpPos(Target:egpId(), vec2(9999,9999))
+                        egpDrawNext("draw", table("target" = Target, "children" = 0)) #re-draw to unhide
+                    }
                 }
             break
             case "draw",
