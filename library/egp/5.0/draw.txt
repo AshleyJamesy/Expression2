@@ -438,7 +438,7 @@ if(first() || dupefinished()) {
             ParentId = Parent:egpId()
             
             local ChildrenByName = Parent["children", table]["name", table]
-            ChildrenByName[Name, table] = This
+            ChildrenByName[Name, table] = This 
             
             if(Name != "") {
                 local Path = (Parent["path", string] == "" ? "" : Parent["path", string] + ".") + Parent["name", string]
@@ -590,7 +590,10 @@ if(first() || dupefinished()) {
             "name" = "",
             "path" = "",
             "size" = vec2(512, 512),
-            "children" = table(),
+            "children" = table(
+                "index" = table(),
+                "name" = table()
+            ),
             "properties" = table(
                 "name" = "body",
                 "type" = "box",
@@ -649,7 +652,6 @@ if(first() || dupefinished()) {
                         }
                         Properties:remove("children")
                     }
-                    
                     
                     #only do this if no debugging
                     if(!EGP_DEBUG) {
