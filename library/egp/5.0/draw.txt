@@ -183,7 +183,7 @@ if(first() || dupefinished()) {
         return Children[Name, table]
     }
     
-    function number table:egpChildExists(Name:string) {
+    function number table:egpExists(Name:string) {
         return This["children", table]["name", table]:exists(Name)
     }
     
