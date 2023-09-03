@@ -25,6 +25,7 @@ if(first() || dupefinished()) {
         #if(Price > 10000) {
         #    Price = roundNearest(Price, 1000)
         #}
+        local Price = This["price", number]
         return Price
     }
     
