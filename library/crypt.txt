@@ -15,15 +15,15 @@ if(first() || dupefinished()) {
         return array(Bits1, Bits2)
     }
     
-    function string encrypt(Keys:array, Data:string) {
+    function string string:encrypt(Keys:array) {
         local K = Keys[1, number]
         local F = 16384 + Keys[2, number]
         local S = ""
-        for(I = 1, Data:length()) {
+        for(I = 1, This:length()) {
             local L = (K % 274877906944)
             local H = (K - L) / 274877906944
             local M = (H % 128)
-            local B = toByte(Data, I)
+            local B = toByte(This, I)
             local C = (B * CRYPT_INV128[M + 1, number] - (H - M) / 128) % 256
             K = L * F + H + C + B
             S = S + format("%02x", C)
@@ -31,15 +31,15 @@ if(first() || dupefinished()) {
         return S
     }
     
-    function string decrypt(Keys:array, Data:string) {
+    function string string:decrypt(Keys:array) {
         local K = Keys[1, number]
         local F = 16384 + Keys[2, number]
         local S = ""
-        for(I = 1, Data:length(), 2) {
+        for(I = 1, This:length(), 2) {
             local L = K % 274877906944
             local H = (K - L) / 274877906944
             local M = H % 128
-            local C = Data:sub(I + 0, I + 1):toNumber(16)
+            local C = This:sub(I + 0, I + 1):toNumber(16)
             local N = (C + (H - M) / 128) * (2*M + 1) % 256
             K = L * F + H + C + N
             S = S + toChar(N)
