@@ -78,7 +78,7 @@ if(first() || dupefinished()) {
         }
         
         if(Percent[1, string] != "") {
-            return (Percent[1, string]:toNumber() / 100) * Max
+            return ceil((Percent[1, string]:toNumber() / 100) * Max)
         }
         
         return 0
@@ -301,7 +301,7 @@ if(first() || dupefinished()) {
         egpDrawNext("remove", table("target" = This))
     }
     
-    function table:egpList(List:table, Method:string, Start:number, Max:number, Spacing:number) {
+    function table:egpList(List:table, Method:string, Start:number, Max:number, Spacing:number, Vertical:number) {
         local Hide = This:egpChildren():count() == 0
         if(Hide && !EGP_DEBUG) {
             EGP_SCREEN:egpPos(This:egpId(), vec2(9999, 99999))
@@ -313,21 +313,25 @@ if(first() || dupefinished()) {
             }
         }
         
-        local Height = (This:egpSize():y() - (Max - 1) * Spacing) / Max
+        local Size = ((Vertical ? This:egpSize():y() : This:egpSize():x()) - (Max - 1) * Spacing) / Max
         for(I = 1, min(List:count(), Max)) {
             local ListItem = List[(Start - 1) + I, table]
-            local Y = ((I - 1) * Height) + ((I - 1) * Spacing)
+            local A = ((I - 1) * Size) + ((I - 1) * Spacing)
             
             if(I <= This:egpChildren():count()) {
-                Method(This:egpChild(I), ListItem, I, List, Y, Height)[table]
+                Method(This:egpChild(I), ListItem, I, List, A, Size)[table]
             } else {
-                This:egpAdd(Method(notable(), ListItem, I, List, Y, Height)[table])
+                This:egpAdd(Method(notable(), ListItem, I, List, A, Size)[table])
             }
         }
         
         if(Hide && !EGP_DEBUG) {
             egpDrawNext("draw", table("target" = This, "children" = 0)) #move back to pos
         }
+    }
+    
+    function table:egpList(List:table, Method:string, Start:number, Max:number, Spacing:number) {
+        This:egpList(List, Method, Start, Max, Spacing, 1)
     }
     
     function table:egpListItem(Method:string, Item:table) {
@@ -522,20 +526,6 @@ if(first() || dupefinished()) {
             EGP_SCREEN:egpOrderAbove(EGP_DEBUG_ID, Id)
         }
         
-        #[
-        if(TypeIds["position", string] == "xv2") {
-            This:egpPos(Properties["position", vector2])
-        } elseif(TypeIds["position", string] == "t") {
-            This:egpPos(Properties["position", table])
-        }
-        
-        if(TypeIds["anchor", string] == "xv2") {
-            This:egpAnchor(Properties["anchor", vector2])
-        } elseif(TypeIds["anchor", string] == "t") {
-            This:egpAnchor(Properties["anchor", table])
-        }
-        ]#
-        
         #COLOUR ------------------------------------------------------------------------:
         local Colour = Properties["colour", vector4]
         EGP_SCREEN:egpColor(Id, Colour)
@@ -589,7 +579,7 @@ if(first() || dupefinished()) {
             "index" = 0,
             "name" = "",
             "path" = "",
-            "size" = vec2(512, 512),
+            "size" = vec2(EGP_SCREEN_WIDTH, EGP_SCREEN_HEIGHT),
             "children" = table(
                 "index" = table(),
                 "name" = table()
@@ -605,7 +595,7 @@ if(first() || dupefinished()) {
                     "x" = "50%",
                     "y" = "50%"
                 ),
-                "size" = vec2(512, 512)
+                "size" = vec2(EGP_SCREEN_WIDTH, EGP_SCREEN_HEIGHT)
             )
         )
         EGP_BODY:egpDraw()
@@ -643,7 +633,7 @@ if(first() || dupefinished()) {
                     Target:egpDraw()
                     
                     if(Properties["events", table]:exists("loaded")) {
-                        egpInputEvent(Properties["events", table]["loaded", string], table("target" = Target))
+                        egpEvent(Properties["events", table]["loaded", string], table("target" = Target), 1)
                     }
                     
                     if(Properties:exists("children")) {
@@ -699,7 +689,7 @@ if(first() || dupefinished()) {
                     }
                     
                     if(Properties["events", table]:exists("removed")) {
-                        egpInputEvent(Properties["events", table]["removed", string], table("target" = Target))
+                        egpEvent(Properties["events", table]["removed", string], table("target" = Target), 1)
                     }
                     
                     egpFree(Target:egpId())
