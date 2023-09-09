@@ -37,7 +37,7 @@ if(first() || dupefinished()) {
         return EGP_USER
     }
     
-    function vector2 entity:egpToScreen(Dir:vector, Fov:number){
+    function vector2 entity:egpToScreen(Dir:vector, Fov:number) {
         local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
         local FDP = CamAngle:forward():dot(Dir)
         
@@ -51,5 +51,32 @@ if(first() || dupefinished()) {
             0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
             0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
         )
+    }
+    
+    function vector2 entity:egpWorldToScreen(WorldPos:vector, Fov:number) {
+        local Dir = WorldPos - This:shootPos()
+        local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
+        local FDP = CamAngle:forward():dot(Dir)
+        
+        if(FDP <= 0) {
+            return vec2(-1, -1)
+        }
+        
+        local VProj = 4 * egpScrH(This) / (6 * tan(0.5 * Fov)) / FDP * Dir
+        
+        return vec2(
+            0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
+            0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
+        )
+    }
+    
+    function void wirelink:egpFixMaterials() {
+        foreach(_:number, Id:number = This:egpObjectIndexes()) {
+            local Material = This:egpMaterial(Id)
+            if(Material != "") {
+                This:egpMaterial(Id, "")
+                This:egpMaterial(Id, Material)
+            }
+        }
     }
 }
