@@ -11,21 +11,43 @@ if(first() || dupefinished()) {
     CATEGORIES = sStoreCategories()
     ITEMS = sStoreItems()
     CART = table()
+    LKCART = table()
     SHIPMENTS = table()
     TAB = ""
     CLIENT = noentity()
     TAX = 0
+    
+    USER01:entity()
+    USER02:entity()
+    USER03:entity()
+    USER04:entity()
+    USER05:entity()
+    USER06:entity()
+    USER07:entity()
+    USER08:entity()
+    USER09:entity()
+    USER10:entity()
+    USER11:entity()
+    USER12:entity()
+    USER13:entity()
+    USER14:entity()
+    USER15:entity()
+    USER16:entity()
+    USER17:entity()
+    USER18:entity()
+    USER19:entity()
+    USER20:entity()
     
     function string table:sItemName() {
         return This["name", string]
     }
     
     function number table:sItemPrice() {
-        #local Price = roundNearest(This["price", number], 500)
+        local Price = This["price", number]
+        #Price = roundNearest(Price, 500)
         #if(Price > 10000) {
         #    Price = roundNearest(Price, 1000)
         #}
-        local Price = This["price", number]
         return Price
     }
     
@@ -63,7 +85,7 @@ if(first() || dupefinished()) {
         return table("amount" = Amount, "total" = Total)
     }
     
-    function table table:dCartItem(CartItem:table, K:number, List:table) {
+    function table table:dCartItem(CartItem:table, K:number, _:table) {
         local Item = CartItem["item", table]
         local Amount = CartItem["amount", number]
         local Name = Item:sItemName()
@@ -197,13 +219,11 @@ if(first() || dupefinished()) {
         return notable()
     }
     
-   
-    
     function table:dCartItem(CartItem:table) {
         This:dCartItem(CartItem, 0, notable())
     }
     
-    function table table:dItem(Item:table, K:number, List:table) {
+    function table table:dItem(Item:table, K:number, _:table) {
         local Name = Item:sItemName()
         local Price = Item:sItemPrice()
         local Available = Item:sItemAvailable()
@@ -396,14 +416,13 @@ if(first() || dupefinished()) {
         }
         
         if(TabCart) {
-            try {
+            if(dExists("body.content.inner.checkout")) {
                 local SubTotal = CartDetails["total", number]
                 local Total = SubTotal * (1 + TAX)
-                
                 local ElementCheckout = dGet("body.content.inner.checkout")
                 ElementCheckout:dGetChild("subtotal"):dText(SubTotal:comma())
                 ElementCheckout:dGetChild("total"):dText(Total:comma())
-            } catch(_) {
+            } else {
                 dGet("body.content.inner"):dAdd(table(
                     "name" = "checkout",
                     "type" = "box",                
@@ -568,13 +587,11 @@ if(first() || dupefinished()) {
                     )
                 ))
             }
-            
             dGet("body.content.inner.items"):dList(Items, "dCartItem", 7, 1)
         } else {
-            try { 
+            if(dExists("body.content.inner.checkout")) {
                 dGet("body.content.inner.checkout"):dRemove()
-            } catch(_) {}
-            
+            }
             dGet("body.content.inner.items"):dList(Items, "dItem", 11, 1)
         }
     }
@@ -1012,7 +1029,7 @@ if(eEventClk("shipment.add") || eEventClk("shipment.remove")) {
     if(TAB == "cart") {
         #TODO: remove items in cart
     } else {
-        foreach(K:number, ElementItem:table = dGet("body.content.inner.items"):dChildren()) {
+        foreach(_:number, ElementItem:table = dGet("body.content.inner.items"):dChildren()) {
             local Item = ElementItem["properties", table]["data", table]
             if(Shipment["name", string]:lower() == Item["name", string]:lower()) {
                 ElementItem:dItem(Item)

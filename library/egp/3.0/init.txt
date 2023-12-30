@@ -195,6 +195,10 @@ if(first() || dupefinished()) {
 
         return EGP_PATH[Path, table]
     }
+    
+    function number dExists(Path:string) {
+        return EGP_PATH:exists(Path)
+    }
 
     function table table:dCopy() {
         return This["properties", table]:clone()
@@ -209,7 +213,6 @@ if(first() || dupefinished()) {
         if(!Children:exists(I)) {
             error("child(" + I + ") not found in element")
         }
-
         return Children[I, table]
     }
 
@@ -218,10 +221,27 @@ if(first() || dupefinished()) {
         if(!Children:exists(Name)) {
             error("child(" + Name + ") not found in element")
         }
-
         return Children[Name, table]
     }
+    
+    function number table:dHasChild(I:number) {
+        return This["children", table]["index", table]:exists(I)
+    }
+    
+    function number table:dHasChild(Name:string) {
+        return This["children", table]["name", table]:exists(Name)
+    }
 
+    #ifdef e:setCollisionGroup(n)
+    function table table:dGetChildFirst() {
+        try {
+            return This:dGetChild(1)
+        } catch(_:string) {
+            error("child(first) not found in element")
+        }
+        return table()
+    }
+    #else
     function table table:dGetChildFirst() {
         try {
             return This:dGetChild(1)
@@ -229,7 +249,19 @@ if(first() || dupefinished()) {
             error("child(first) not found in element")
         }
     }
+    #endif
 
+    #ifdef e:setCollisionGroup(n)
+    function table table:dGetChildLast() {
+        local Children = This["children", table]["index", table]
+        try {
+            return This:dGetChild(Children:count())
+        } catch(_:string) {
+            error("child(last) not found in element")
+        }
+        return table()
+    }
+    #else
     function table table:dGetChildLast() {
         local Children = This["children", table]["index", table]
         try {
@@ -238,7 +270,7 @@ if(first() || dupefinished()) {
             error("child(last) not found in element")
         }
     }
-
+    #endif
     function void table:dAdd(Properties:table) {
         dEventQueue("add", table(
             "parent" = This,
@@ -260,14 +292,13 @@ if(first() || dupefinished()) {
         ))
     }
 
-    #TODO: classes
     function table:dList(List:table, Method:string, Max:number, Start:number) {
-        if(This:dChildren():count() > List:count()) {
-            for(I = This:dChildren():count(), List:count() + 1, -1) {
+        local Children = This:dChildren()
+        if(Children:count() > List:count()) {
+            for(I = Children:count(), List:count() + 1, -1) {
                 This:dGetChild(I):dRemove()
             }
-        }
-
+        }        
         for(I = 1, min(List:count(), Max)) {
             local ListItem = List[(Start - 1) + I, table]
 
@@ -299,7 +330,6 @@ if(first() || dupefinished()) {
 
      function void table:dProperties() {
         local TypeIds = This:typeids()
-
         local Type = This:setProperty(TypeIds, "type", "box", 0)
         This:setProperty(TypeIds, "name", Type, 0)
 
@@ -391,13 +421,13 @@ if(first() || dupefinished()) {
         }
 
         local ParentId = 0
-        try {
+        if(This:exists("parent")) {
             local Parent = This:dParent()
             ParentId = Parent:dId()
-
+            
             local ChildrenByName = Parent["children", table]["name", table]
             ChildrenByName[Name, table] = This
-
+            
             if(Name != "") {
                 local Path = (Parent["path", string] == "" ? "" : Parent["path", string] + ".") + Parent["name", string]
                 if(This["path", string] != "") {
@@ -407,24 +437,24 @@ if(first() || dupefinished()) {
                         }
                     }
                 }
-
+                
                 This["path", string] = Path
-
+                
                 local FullPath = Path + "." + Name
                 EGP_PATH[FullPath, table] = This
             }
-
+            
             if(EGP_SCREEN:egpParent(Id) != ParentId) {
                 EGP_SCREEN:egpParent(Id, ParentId)
             }
-        } catch(_) {}
-
+        }
+        
         local TypeIds = Properties:typeids()
-
+        
         #POSITION ------------------------------------------------------------------------:
         local X = 0
         local Y = 0
-
+        
         if(ParentId > 0) {
             local ParentSize = EGP_SCREEN:egpSize(ParentId)
 
@@ -605,7 +635,6 @@ if(first() || dupefinished()) {
                     Event["replace", number] = 1
                     return 0
                 }
-            break
             case "remove",
                 local Target = Event["target", table]
 
@@ -653,7 +682,6 @@ if(first() || dupefinished()) {
                     ))
                 }
                 return 0
-            break
             case "callback",
                 eEventPush(Event["name", string], Event["data", table])
                 EGP_QUEUE:remove(1)
@@ -666,8 +694,6 @@ if(first() || dupefinished()) {
         EGP_QUEUE:remove(1)
         return 0
     }
-
-    egpWire()
 }
 
 if(egpScreenChanged()) {
