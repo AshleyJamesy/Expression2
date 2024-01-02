@@ -1,0 +1,15 @@
+@name library/cards
+@persist LIB_CARDS:table
+
+if(first() | dupefinished()) {
+    LIB_CARDS = table()
+    foreach(_:number, Suit:string = array("SPADES", "CLUBS", "HEARTS", "DIAMONDS")) {
+        foreach(_:number, Value:string = array("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")) {
+            LIB_CARDS:pushTable(table( "suit" = Suit, "value" = Value ))
+        }
+    }
+    
+    function table cards() {
+        return LIB_CARDS:clone()
+    }
+}
