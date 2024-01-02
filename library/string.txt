@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/string
+
+if(first() | dupefinished()) {
     function number string:startsWith(String:string) {
         return This:left(String:length()) == String
     }

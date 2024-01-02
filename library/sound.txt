@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/sound
+
+if(first() | dupefinished()) {
     function table soundRandom(T_SOUNDTABLE:table) {
         local SOUND = T_SOUNDTABLE[randint(1, T_SOUNDTABLE:count()), table]
         soundPlay(SOUND["id", string] == "" ? SOUND["path", string] : SOUND["id", string], SOUND["duration", number], SOUND["path", string])

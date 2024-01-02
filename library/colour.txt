@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/colour
+
+if(first() | dupefinished()) {
     function string rgb2hex(Colour:vector) {
         local R = min(max(Colour:x(), 0), 255)
         local G = min(max(Colour:y(), 0), 255)

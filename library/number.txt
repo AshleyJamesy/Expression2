@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/number
+
+if(first() | dupefinished()) {
     function number roundNearest(Value:number, Nearest:number) {
         if (Nearest == 0) {
             return Value

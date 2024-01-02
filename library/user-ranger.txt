@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/user-ranger
+
+if(first() | dupefinished()) {
     function entity wirelink:userRanger(Length:number) {
         local UserEntity = This:entity()
         if(!UserEntity:isValid()) {

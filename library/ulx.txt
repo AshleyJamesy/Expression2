@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/ulx
+
+if(first() | dupefinished()) {
     function entity:ulxSendPrivateMessage(String:string) {
         if(This:isValid() && This:isPlayer()) {
             if(This == owner()) {

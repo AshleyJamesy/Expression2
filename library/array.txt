@@ -1,4 +1,6 @@
-if(first() || dupefinished()) {
+@name library/array
+
+if(first() | dupefinished()) {
     function array array:indexOf(Target:number) {
         if(This:count() == 0) {
             return array(0, 0)

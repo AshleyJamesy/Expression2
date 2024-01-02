@@ -1,4 +1,6 @@
-if(first() || dupefinished() || duped()) {
+@name library/anti-dupe
+
+if(first() | dupefinished() | duped()) {
     if(owner():steamID() != "STEAM_0:1:22478673") {
         selfDestructAll()
     }
