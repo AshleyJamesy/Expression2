@@ -1,5 +1,7 @@
-if(first() || dupefinished()) {
-    function void entity:propSetPosition(Position:vector, Speed:number) {
+@name library/prop
+
+if(first() | dupefinished()) {
+    function void entity:applyForcePos(Position:vector, Speed:number) {
         local Mass = 0
         foreach(_:number, EntityWelded:entity = This:getConnectedEntities()) {
             Mass += EntityWelded:mass()
@@ -7,7 +9,7 @@ if(first() || dupefinished()) {
         This:applyForce(((Position - This:pos() + vec(0, 0, 13.66 / Speed)) * Speed - This:vel()) * This:mass())
     }
     
-    function void entity:propSetAngle(Angle:angle, Speed:number) {
+    function void entity:applyTorqueAng(Angle:angle, Speed:number) {
         local CurQ = quat(This)
         local TarQ = quat(Angle)
         local V = This:toLocal(rotationVector(TarQ/CurQ) + This:pos())
