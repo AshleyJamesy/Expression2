@@ -3,8 +3,9 @@
 @persist SPEED:number PRIZE:string COUNT:number
 @persist [BET, MULTIPLIER]:number PLAYER:entity
 
+#include "library/string"
 #include "library/number"
-#include "library/egp/5.0/init"
+#include "library/egp"
 
 if(first() || dupefinished()) {
     BET = 10000
@@ -23,7 +24,7 @@ if(first() || dupefinished()) {
     function table:dRefreshGun(S_NAME:string) {
         local Item = table(
             "name" = "",
-            "colour" = vec(150, 150, 150)
+            "color" = vec(150, 150, 150)
         )
         
         if(ITEMS:exists(S_NAME)) {
@@ -32,12 +33,12 @@ if(first() || dupefinished()) {
         
         local Size = vec2(140, 137)
         local Name = Item["name", string]
-        local Colour = Item["colour", vector]
+        local Colour = Item["color", vector]
         local Material = Item["material", string]
         local ImageSize = Item["size", vector2]
         
         local ElementLabel = This:egpChild("label")
-        ElementLabel:egpColour(vec4(Colour, 255))
+        ElementLabel:egpColor(vec4(Colour, 255))
         local ElementText = ElementLabel:egpChild("text")
         ElementText:egpText(Name)
         
@@ -67,7 +68,7 @@ if(first() || dupefinished()) {
     function void cItem(S_NAME:string, V_COLOUR:vector, S_MATERIAL:string, V2_IMAGE_SIZE:vector2, S_RARITY:string, N_PROBABILITY:number, N_MULTIPLIER:number) {
         ITEMS[S_NAME, table] = table(
             "name" = S_NAME,
-            "colour" = V_COLOUR,
+            "color" = V_COLOUR,
             "material" = S_MATERIAL,
             "size" = V2_IMAGE_SIZE,
             "rarity" = S_RARITY,
@@ -138,56 +139,10 @@ if(first() || dupefinished()) {
 
     #rare
     cItem("Knife", vec(255,175,0), "vgui/hud/m9k_knife", vec2(0.7, 0.7), "rare", 0.0025, 10.0) #0.25%
-}
 
-if(COUNT == 0 && PLAYER == noentity()) {
-    if(egpEventClk("mouse.press")) {
-        local Event = egpEventData()
-        local User = Event["user", entity]
-        local Cursor = Event["cursor", vector2]
-        
-        local ElementBuy = egpGet("body.buy")
-        if(ElementBuy:egpMouseOver(Cursor)) {
-            if(moneyRequest(User, BET * MULTIPLIER, 15, "Open Case")) {
-                PLAYER = User
-            }
-        }
-        
-        local ElementScroll = egpGet("body.scroll")
-        if(ElementScroll:egpMouseOver(Cursor)) {
-            local ElementScrollButton = ElementScroll:egpChild("button")
-            local Position = vec2(clamp(Cursor:x() - 16, 8, ElementScroll:egpSize():x() - 8), 8)
-            ElementScrollButton:egpPos(Position)
-            
-            local Percent = (Position:x() / (ElementScroll:egpSize():x() - 8))
-            MULTIPLIER = roundNearest(1 + (Percent - 0.5), 0.05)
-            
-            local ElementBuyText = egpGet("body.buy"):egpChild("text")
-            ElementBuyText:egpText("Open Case ($" + (BET * MULTIPLIER):comma() + ")")
-            
-            local ElementInfo = egpGet("body.info")
-            local ElementColumn01 = ElementInfo:egpChild(1)
-            local ElementColumn02 = ElementInfo:egpChild(2)
-            local ElementColumn03 = ElementInfo:egpChild(3)
-            
-            foreach(K:number, ItemName:string = array("P228", "Glock", "USP", "Five Seven", "Berettes", "Scout")) {
-                local Item = ITEMS[ItemName, table]
-                ElementColumn01:egpChild(K):egpText(ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma())
-            }
-            
-            foreach(K:number, ItemName:string = array("XM1014", "Mac10", "MP5", "Famas", "P90", "AUG")) {
-                local Item = ITEMS[ItemName, table]
-                ElementColumn02:egpChild(K):egpText(ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma())
-            }
-            
-            foreach(K:number, ItemName:string = array("Deagle", "M4A1S", "AK47", "AWP", "Knife")) {
-                local Item = ITEMS[ItemName, table]
-                ElementColumn03:egpChild(K):egpText(ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma())
-            }
-        }
-    }
+    #cItem("P228", vec(75,100,225), "vgui/gfx/vgui/p228", vec2(0.8, 0.6), "uncommon", 0.5, 0.0)
+    #cItem("Knife", vec(255,175,0), "vgui/hud/m9k_knife", vec2(0.7, 0.7), "rare", 0.5, 2.0)
 }
-
 
 if(moneyClk()) {
     if(PLAYER == owner()) {
@@ -198,10 +153,10 @@ if(moneyClk()) {
     
     SPEED = 1
     COUNT = 25
-    EGP_SCREEN:entity():soundPlay("pcasino/other/lever.wav", 0.311, "pcasino/other/lever.wav")
+    egpScreen():soundPlay("pcasino/other/lever.wav", 0.311, "pcasino/other/lever.wav")
     soundVolume("pcasino/other/lever.wav", 0.5)
     
-    egpEvent("tick")
+    timer("tick", 0)
 }
 
 if(moneyNoClk()) {
@@ -212,309 +167,322 @@ if(moneyTimeout()) {
     PLAYER = noentity()
 }
 
-if(egpEventClk("document.ready")) {
-    egpBody():egpColour(vec4(5, 5, 75, 255))
-    
-    egpBody():egpAdd(table(
-        "name" = "header",
-        "type" = "box",
-        "colour" = vec4(5, 5, 50, 255),
-        "position" = table(
-            "x" = "2.5%",
-            "y" = "2.5%"
-        ),
-        "size" = table(
-            "width" = "95%",
-            "height" = "10%"
-        ),
-        "children" = table(
-            table(
-                "name" = "text",
-                "type" = "text",
-                "colour" = vec4(255, 255, 255, 255),
-                "text" = "CSGO CASE OPENER",
-                "align" = vec2(1, 1),
-                "font" = table(
-                    "font" = "",
-                    "size" = 26
-                )
-            )
-        )
-    ))
-    
-    egpBody():egpAdd(table(
-        "name" = "content",
-        "type" = "box",
-        "colour" = vec4(5, 5, 50, 255),
-        "position" = table(
-            "x" = 0,
-            "y" = 75
-        ),
-        "size" = table(
-            "width" = "100%",
-            "height" = 158
-        ),
-        "children" = table(
-            table(
-                "name" = "deck",
-                "type" = "box",
-                "children" = table()
-            )
-        )
-    ))
-    
-    egpBody():egpAdd(table(
-        "name" = "info",
-        "type" = "box",
-        "position" = table(
-            "x" = "2.5%",
-            "y" = "48%"
-        ),
-        "size" = table(
-            "width" = "95%",
-            "height" = 190
-        ),
-        "children" = table(
-            table(
-                "type" = "box",
-                "size" = table(
-                    "width" = "33%",
-                    "height" = "100%"
-                ),
-                "children" = table()
-            ),
-            table(
-                "type" = "box",
-                "position" = table(
-                    "x" = "33%",
-                    "y" = 0
-                ),
-                "size" = table(
-                    "width" = "33%",
-                    "height" = "100%"
-                ),
-                "children" = table()
-            ),
-            table(
-                "type" = "box",
-                "position" = table(
-                    "x" = "66%",
-                    "y" = 0
-                ),
-                "size" = table(
-                    "width" = "33.8%",
-                    "height" = "100%"
-                ),
-                "children" = table()
-            )
-        )
-    ))
-    
-    egpBody():egpAdd(table(
-        "name" = "buy",
-        "type" = "box",
-        "colour" = vec4(0, 150, 0, 255),
-        "size" = table(
-            "width" = "95%",
-            "height" = "10%"
-        ),
-        "position" = table(
-            "x" = "2.5%",
-            "y" = 450
-        ),
-        "children" = table(
-            table(
-                "type" = "box",
-                "colour" = vec4(0, 25, 0, 255),
-                "material" = "gui/gradient_up"
-            ),
-            table(
-                "name" = "text",
-                "type" = "text",
-                "colour" = vec4(0, 50, 0, 255),
-                "text" = "Open Case ($" + (BET * MULTIPLIER):comma() + ")",
-                "align" = vec2(1, 1),
-                "font" = table(
-                    "font" = "",
-                    "size" = 22
-                )
-            )
-        )
-    ))
-    
-    egpBody():egpAdd(table(
-        "name" = "scroll",
-        "type" = "box",
-        "colour" = vec4(50, 50, 100, 255),
-        "rounded" = 1,
-        "size" = table(
-            "width" = "95%",
-            "height" = 15
-        ),
-        "position" = table(
-            "x" = "2.5%",
-            "y" = 425
-        ),
-        "children" = table(
-            table(
-                "name" = "button",
-                "type" = "circle",
-                "colour" = vec4(5, 5, 50, 255),
-                "size" = vec2(8,8),
-                "position" = table(
-                    "x" = "50%",
-                    "y" = 8
-                )
-            )
-        )
-    ))
-    
-    egpEvent("info")
-    egpEvent("cards")
-    egpEvent("tick")
-}
-
-if(egpEventClk("info")) {
-    local ElementInfo = egpGet("body.info")
-    local ElementColumn1 = ElementInfo:egpChild(1)
-    local ElementColumn2 = ElementInfo:egpChild(2)
-    local ElementColumn3 = ElementInfo:egpChild(3)
-    
-    foreach(K:number, ItemName:string = array("P228", "Glock", "USP", "Five Seven", "Berettes", "Scout")) {
-        local Item = ITEMS[ItemName, table]
-        ElementColumn1:egpAdd(table(
-            "type" = "text",
-            "colour" = vec4(Item["colour", vector], 255),
-            "text" = ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma(),
-            "align" = vec2(0, 1),
-            "position" = table(
-                "x" = 0,
-                "y" = (K - 1) * 28
-            ),
-            "size" = table(
-                "width" = "100%",
-                "height" = "15%"
-            )
-        )
-    )}
-    
-    foreach(K:number, ItemName:string = array("XM1014", "Mac10", "MP5", "Famas", "P90", "AUG")) {
-        local Item = ITEMS[ItemName, table]
-        ElementColumn2:egpAdd(table(
-            "type" = "text",
-            "colour" = vec4(Item["colour", vector], 255),
-            "text" = ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma(),
-            "align" = vec2(1, 1),
-            "position" = table(
-                "x" = 0,
-                "y" = (K - 1) * 28
-            ),
-            "size" = table(
-                "width" = "100%",
-                "height" = "15%"
-            )
-        ))
-    }
-    
-    foreach(K:number, ItemName:string = array("Deagle", "M4A1S", "AK47", "AWP", "Knife")) {
-        local Item = ITEMS[ItemName, table]
-        ElementColumn3:egpAdd(table(
-            "type" = "text",
-            "colour" = vec4(Item["colour", vector], 255),
-            "text" = ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma(),
-            "align" = vec2(1, 1),
-            "position" = table(
-                "x" = 0,
-                "y" = (K - 1) * 28
-            ),
-            "size" = table(
-                "width" = "100%",
-                "height" = "15%"
-            )
-        ))
-    }
-}
-
-if(egpEventClk("cards")) {
-    local ElementCards = egpGet("body.content.deck")
-    
-    for(I = -2, 3) {
-        DECK:pushString("")
-        
-        ElementCards:egpAdd(table(
-            "name" = "card",
+if(egpWirelinkChanged()) {
+    egpClear(512,512,function(Event:table, _:function) {
+        local Target = Event["target", table]
+        Target:egpAdd(table(
+            "name" = "background",
             "type" = "box",
-            "colour" = vec4(5, 5, 45, 255),
-            "position" = table(
-                "x" = (256 - 140 * 0.5) + 145 * I,
-                "y" = 0  
-            ),
-            "size" = table(
-                "width" = 140,
-                "height" = 137
+            "color" = vec4(5,5,75,255)
+        ))
+        
+        Target:egpAdd(table(
+            "name" = "header",
+            "type" = "box",
+            "position" = table("x" = "2.5%", "y" = "2.5%"),
+            "size" = table("width" = "95%", "height" = "10%"),
+            "color" = vec4(5,5,50,255),
+            "children" = table(
+                table(
+                    "name" = "text",
+                    "type" = "text",
+                    "color" = vec4(255,255,255,255),
+                    "text" = "CSGO CASE OPENER",
+                    "align" = vec2(1, 1),
+                    "font" = table(
+                        "font" = "",
+                        "size" = 26
+                    )
+                )
+            )
+        ))
+        
+        Target:egpAdd(table(
+            "name" = "content",
+            "type" = "box",
+            "color" = vec4(5,5,50,255),
+            "position" = table("x" = 0, "y" = 75),
+            "size" = table("width" = "100%", "height" = 158),
+            "children" = table(
+                table(
+                    "name" = "deck",
+                    "type" = "box",
+                    "anchor" = table("x" = 0, "y" = "50%"),
+                    "position" = table("x" = 0, "y" = "50%"),
+                    "children" = table(),
+                    "events" = table(
+                        "added" = function(Event:table, _:function) {
+                            local Target = Event["target", table]
+                            for(I = -2, 3) {
+                                DECK:pushString("")
+                                
+                                Target:egpAdd(table(
+                                    "name" = "card",
+                                    "type" = "box",
+                                    "color" = vec4(5, 5, 45, 255),
+                                    "position" = table(
+                                        "x" = (256 - 140 * 0.5) + 145 * I,
+                                        "y" = 0  
+                                    ),
+                                    "size" = table(
+                                        "width" = 140,
+                                        "height" = 137
+                                    ),
+                                    "children" = table(
+                                        table(
+                                            "name" = "effect01",
+                                            "type" = "box",
+                                            "color" = vec4(150, 150, 150, 255),
+                                            "size" = table(
+                                                "width" = "100%",
+                                                "height" = "67%"
+                                            ),
+                                            "material" = "gui/gradient_down"
+                                        ),
+                                        table(
+                                            "name" = "image-container",
+                                            "type" = "box",
+                                            "outline" = 1,
+                                            "size" = table(
+                                                "width" = "100%",
+                                                "height" = "67%"
+                                            ),
+                                            "children" = table(
+                                                table(
+                                                    "name" = "image",
+                                                    "type" = "box"
+                                                )
+                                            )
+                                        ),
+                                        table(
+                                            "name" = "label",
+                                            "type" = "box",
+                                            "color" = vec4(150, 150, 150, 255),
+                                            "position" = table(
+                                                "x" = 0,
+                                                "y" = "67%"
+                                            ),
+                                            "size" = table(
+                                                "width" = "100%",
+                                                "height" = "33%"
+                                            ),
+                                            "material" = "gui/gradient_up",
+                                            "children" = table(
+                                                table(
+                                                    "name" = "text",
+                                                    "type" = "text",
+                                                    "color" = vec4(255, 255, 255, 255),
+                                                    "text" = "",
+                                                    "align" = vec2(1, 1),
+                                                    "font" = table(
+                                                        "font" = "",
+                                                        "size" = 20
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                ))
+                            }
+                        }
+                    )
+                )
+            )
+        ))
+        
+        Target:egpAdd(table(
+            "name" = "info",
+            "type" = "box",
+            "position" = table("x" = "2.5%", "y" = "48%"),
+            "size" = table("width" = "95%", "height" = 190),
+            "events" = table(
+                "added" = function(Event:table, _:function) {
+                    local Target = Event["target", table]
+                    local ElementColumn1 = Target:egpChild(1)
+                    local ElementColumn2 = Target:egpChild(2)
+                    local ElementColumn3 = Target:egpChild(3)
+                    
+                    foreach(K:number, ItemName:string = array("P228", "Glock", "USP", "Five Seven", "Berettes", "Scout")) {
+                        local Item = ITEMS[ItemName, table]
+                        ElementColumn1:egpAdd(table(
+                            "type" = "text",
+                            "color" = vec4(Item["color", vector], 255),
+                            "text" = ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma(),
+                            "align" = vec2(0, 1),
+                            "position" = table(
+                                "x" = 0,
+                                "y" = (K - 1) * 28
+                            ),
+                            "size" = table(
+                                "width" = "100%",
+                                "height" = "15%"
+                            )
+                        )
+                    )}
+                    
+                    foreach(K:number, ItemName:string = array("XM1014", "Mac10", "MP5", "Famas", "P90", "AUG")) {
+                        local Item = ITEMS[ItemName, table]
+                        ElementColumn2:egpAdd(table(
+                            "type" = "text",
+                            "color" = vec4(Item["color", vector], 255),
+                            "text" = ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma(),
+                            "align" = vec2(1, 1),
+                            "position" = table(
+                                "x" = 0,
+                                "y" = (K - 1) * 28
+                            ),
+                            "size" = table(
+                                "width" = "100%",
+                                "height" = "15%"
+                            )
+                        ))
+                    }
+                    
+                    foreach(K:number, ItemName:string = array("Deagle", "M4A1S", "AK47", "AWP", "Knife")) {
+                        local Item = ITEMS[ItemName, table]
+                        ElementColumn3:egpAdd(table(
+                            "type" = "text",
+                            "color" = vec4(Item["color", vector], 255),
+                            "text" = ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma(),
+                            "align" = vec2(1, 1),
+                            "position" = table(
+                                "x" = 0,
+                                "y" = (K - 1) * 28
+                            ),
+                            "size" = table(
+                                "width" = "100%",
+                                "height" = "15%"
+                            )
+                        ))
+                    }
+                }
             ),
             "children" = table(
                 table(
-                    "name" = "effect01",
                     "type" = "box",
-                    "colour" = vec4(150, 150, 150, 255),
-                    "size" = table(
-                        "width" = "100%",
-                        "height" = "67%"
-                    ),
-                    "material" = "gui/gradient_down"
+                    "size" = table( "width" = "33%", "height" = "100%"),
+                    "children" = table()
                 ),
                 table(
-                    "name" = "image-container",
                     "type" = "box",
-                    "outline" = 1,
-                    "size" = table(
-                        "width" = "100%",
-                        "height" = "67%"
-                    ),
-                    "children" = table(
-                        table(
-                            "name" = "image",
-                            "type" = "box"
-                        )
-                    )
+                    "position" = table("x" = "33%", "y" = 0),
+                    "size" = table("width" = "33%", "height" = "100%"),
+                    "children" = table()
                 ),
                 table(
-                    "name" = "label",
                     "type" = "box",
-                    "colour" = vec4(150, 150, 150, 255),
-                    "position" = table(
-                        "x" = 0,
-                        "y" = "67%"
-                    ),
-                    "size" = table(
-                        "width" = "100%",
-                        "height" = "33%"
-                    ),
-                    "material" = "gui/gradient_up",
-                    "children" = table(
-                        table(
-                            "name" = "text",
-                            "type" = "text",
-                            "colour" = vec4(255, 255, 255, 255),
-                            "text" = "",
-                            "align" = vec2(1, 1),
-                            "font" = table(
-                                "font" = "",
-                                "size" = 20
-                            )
-                        )
-                    )
+                    "position" = table("x" = "66%", "y" = 0),
+                    "size" = table("width" = "33.8%", "height" = "100%"),
+                    "children" = table()
                 )
             )
         ))
-    }
+        
+        Target:egpAdd(table(
+            "name" = "buy",
+            "type" = "box",
+            "position" = table("x" = "2.5%", "y" = 450),
+            "size" = table("width" = "95%", "height" = "10%"),
+            "color" = vec4(0, 150, 0, 255),
+            "events" = table(
+                "mousedown" = function(Event:table, _:function) {
+                    if(COUNT > 0 | PLAYER != noentity()) {
+                        return
+                    }
+                    
+                    local User = Event["user", entity]
+                    if(moneyRequest(User, BET * MULTIPLIER, 15, "Open Case")) {
+                        PLAYER = User
+                    }
+                }
+            ),
+            "children" = table(
+                table(
+                    "type" = "box",
+                    "color" = vec4(0, 25, 0, 255),
+                    "material" = "gui/gradient_up",
+                    "mouse-events" = "none"
+                ),
+                table(
+                    "name" = "text",
+                    "type" = "text",
+                    "color" = vec4(0, 50, 0, 255),
+                    "text" = "Open Case ($" + (BET * MULTIPLIER):comma() + ")",
+                    "align" = vec2(1, 1),
+                    "font" = table(
+                        "font" = "",
+                        "size" = 22
+                    ),
+                    "mouse-events" = "none"
+                )
+            )
+        ))
+        
+        Target:egpAdd(table(
+            "name" = "scroll",
+            "type" = "box",
+            "position" = table("x" = "2.5%", "y" = 425),
+            "size" = table("width" = "95%", "height" = 15),
+            "color" = vec4(50, 50, 100, 255),
+            "rounded" = 1,
+            "events" = table(
+                "mousedown" = function(Event:table, _:function) {
+                    if(COUNT > 0 | PLAYER != noentity()) {
+                        return
+                    }
+                    
+                    local Target = Event["target", table]
+                    local CursorPosition = Event["position", vector2]
+                    
+                    local ElementScrollButton = Target:egpChild("button")
+                    local Position = vec2(clamp(CursorPosition:x() - 16, 8, Target:egpSize():x() - 8), 8)
+                    ElementScrollButton:egpPos(Position)
+                    
+                    local Percent = (Position:x() / (Target:egpSize():x() - 8))
+                    MULTIPLIER = roundNearest(1 + (Percent - 0.5), 0.05)
+                    
+                    local ElementBuyText = egpGet("document.buy"):egpChild("text")
+                    ElementBuyText:egpText("Open Case ($" + (BET * MULTIPLIER):comma() + ")")
+                    
+                    local ElementInfo = egpGet("document.info")
+                    local ElementColumn01 = ElementInfo:egpChild(1)
+                    local ElementColumn02 = ElementInfo:egpChild(2)
+                    local ElementColumn03 = ElementInfo:egpChild(3)
+                    
+                    foreach(K:number, ItemName:string = array("P228", "Glock", "USP", "Five Seven", "Berettes", "Scout")) {
+                        local Item = ITEMS[ItemName, table]
+                        ElementColumn01:egpChild(K):egpText(ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma())
+                    }
+                    
+                    foreach(K:number, ItemName:string = array("XM1014", "Mac10", "MP5", "Famas", "P90", "AUG")) {
+                        local Item = ITEMS[ItemName, table]
+                        ElementColumn02:egpChild(K):egpText(ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma())
+                    }
+                    
+                    foreach(K:number, ItemName:string = array("Deagle", "M4A1S", "AK47", "AWP", "Knife")) {
+                        local Item = ITEMS[ItemName, table]
+                        ElementColumn03:egpChild(K):egpText(ItemName + " - $" + (BET * Item["multiplier", number] * MULTIPLIER):comma())
+                    }
+                }
+            ),
+            "children" = table(
+                table(
+                    "name" = "button",
+                    "type" = "circle",               
+                    "position" = table("x" = "50%", "y" = 8),
+                    "size" = vec2(8,8),
+                    "color" = vec4(5, 5, 50, 255),
+                    "mouse-events" = "none"
+                )
+            )
+        ))
+    })
 }
 
-if(egpEventClk("tick")) {
-    TIME += (SPEED * COUNT) * 0.01
+if(clk("tick")) {
+    TIME += (SPEED * COUNT) * 1/60
     
-    local ElementDeck = egpGet("body.content.deck")
+    local ElementDeck = egpGet("document.content.deck")
     if(TIME >= 1.0) {
         TIME = 0
         
@@ -546,6 +514,6 @@ if(egpEventClk("tick")) {
     EGP_SCREEN:egpPos(ElementDeck:egpId(), vec2(0, 10) + TIME * -vec2(145, 0))
     
     if(COUNT > 0) {
-        egpEvent("tick")
+        timer("tick", 0)
     }
 }
