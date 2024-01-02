@@ -1,74 +1,132 @@
-@persist HTTP_QUEUE:table [HTTP_ID, HTTP_QUEUED]:number
+@name library/http
 
-#include "library/event/2.0/event"
+#ifdef httpClk()
+    #error http extension is already enabled on the server
+#endif
 
-if(first() || dupefinished()) {
-    runOnFile(1)
+#ifndef runOnFile(n)
+    #error http library needs file extension enabled!
+#endif
+
+#[
+    import os, time
+    import re
+    import requests
+    import json
     
-    HTTP_ID = 0
-    HTTP_QUEUED = 0
-    HTTP_QUEUE = table()
+    def request(directory, filename):
+        filepath = os.path.join(directory, filename)
+        f = open(filepath)
+        data = json.load(f)
+        f.close()
+        os.remove(filepath)
+        
+        url = data["url"]
+        
+        response = None
+        match data["method"]:
+            case "GET":
+                print("GET: " + url)
+                response = requests.get(url)
+            case "POST":
+                print("POST: " + url)
+                print(data["headers"])
+                print(data["body"])
+                response = requests.post(url, data=data["body"], headers=data["headers"])
+        
+        if(response != None):
+            filepath = os.path.join(directory, re.sub("^(\d+)\.json$", "\\1-complete.json", filename))
+            with open(filepath, "w") as outfile:
+                json.dump(
+                    {
+                        "status": response.status_code,
+                        "reason": response.reason,
+                        "body": response.text
+                    }, outfile, indent=4)
     
-    function void httpGet(Name:string, Url:string, Headers:table) {
-        if(fileCanWrite()) {
-            HTTP_ID++
-            local Request = table(
-                "id" = HTTP_ID,
-                "name" = Name,
-                "url" = Url,
-                "method" = "GET",
-                "headers" = Headers,
-                "body" = ""
-            )
-            HTTP_QUEUE:pushTable(Request)
-            fileWrite("requests/" + HTTP_ID + ".json", jsonEncode(Request))
+    def run(directory):
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
             
-            if(HTTP_QUEUED == 0) {
-                HTTP_QUEUED = 1
-                eEventPush("http.check")
-            }
-        } else {
-            eEventPush("http.request", 1000, table(
-                "id" = HTTP_ID,
-                "name" = Name,
-                "url" = Url,
-                "method" = "GET",
-                "headers" = Headers,
-                "body" = ""
-            ))
-        }
+            if os.path.isfile(filepath):
+                if(re.search("^\d+\.json$", filename) != None):
+                    request(directory, filename)
+                
+                if(re.search("^\d+\-complete.json$", filename) != None):
+                    if(os.stat(filepath).st_size == 0):
+                        os.remove(filepath)
+    
+    while(1):
+        run("<PATH TO /garrysmod/data/e2files/requests/>")
+        time.sleep(1)
+]#
+
+@persist LIB_HTTP:table
+
+if(first() | dupefinished()) {
+    runOnFile(1)
+    runOnList(1)
+    
+    LIB_HTTP = table(
+        "queue" = table(),
+        "clk" = 0,
+        "clkname" = "",
+        "clkdata" = table()
+    )
+    
+    function void httpRequest(Name:string, Type:string, Url:string, Headers:table, Body:string) {
+        local Queue = LIB_HTTP["queue", table]
+        Queue:pushTable(table(
+            "name" = Name,
+            "url" = Url,
+            "method" = Type:upper(),
+            "headers" = Headers,
+            "body" = Body
+        ))
+        timer("library.http.queue", 0)
     }
     
-    function void httpPost(Name:string, Url:string, Headers:table, Body:string) {
+    function void httpRequest(Name:string, Type:string, Url:string, Headers:table) {
+        httpRequest(Name, Type, Url, Headers, "")
+    }
+    
+    function number httpClk() {
+        return LIB_HTTP["clk", number]
+    }
+}
+
+LIB_HTTP["clk", number] = 0
+LIB_HTTP["clkname", string] = ""
+LIB_HTTP["clkdata", string] = ""
+
+if(clk("library.http.queue")) {
+    local Queue = LIB_HTTP["queue", table]
+    if(Queue:count() > 0) {
         if(fileCanWrite()) {
-            HTTP_ID++
-            local Request = table(
-                "id" = HTTP_ID,
-                "name" = Name,
-                "url" = Url,
-                "method" = "POST",
-                "headers" = Headers,
-                "body" = Body
-            )
-            HTTP_QUEUE:pushTable(Request)
-            fileWrite("requests/" + HTTP_ID + ".json", jsonEncode(Request))
-            
-            if(HTTP_QUEUED == 0) {
-                HTTP_QUEUED = 1
-                eEventPush("http.check")
-            }
+            fileWrite("http-requests-", jsonEncode(Queue, 1))
         } else {
-            eEventPush("http.request", 1000, table(
-                "name" = Name,
-                "url" = Url,
-                "method" = "POST",
-                "headers" = Headers,
-                "body" = Body
-            ))
+            timer("library.http.queue", 1000) #can't write file now, try again in 1s
         }
     }
 }
 
+if(fileClk()) {
+    switch(fileStatus()) {
+        case _FILE_OK,
+            fileWrite(fileName(), "") #zero bytes, python will remove it
+        break
+        case _FILE_404,
+        case _FILE_TIMEOUT,
+        case _FILE_TRANSFER_ERROR,
+        case _FILE_UNKNOWN,
+            
+        break
+        default,
+        break
+    }
+}
+
+#[
 if(eEventClk("http.request")) {
     local Request = eEventGetPayload()
     
@@ -83,14 +141,14 @@ if(eEventClk("http.request")) {
 }
 
 if(eEventClk("http.check")) {
-    HTTP_QUEUED = 0
-    if(HTTP_QUEUE:count() > 0) {
-        HTTP_QUEUED = 1
+    LIB_LIB_HTTP_QUEUED = 0
+    if(LIB_HTTP_QUEUE:count() > 0) {
+        LIB_LIB_HTTP_QUEUED = 1
         eEventPush("http.check", 1000)
     }
     
     if(fileCanLoad()) {
-        foreach(_:number, Request:table = HTTP_QUEUE) {
+        foreach(_:number, Request:table = LIB_HTTP_QUEUE) {
             fileLoad("requests/" + Request["id", number] + "-done.json")
         }
     }
@@ -100,14 +158,14 @@ if(fileClk()) {
     if(fileStatus() == _FILE_OK) {
         fileWrite(fileName(), "")
         
-        for(I = 1, HTTP_QUEUE:count()) {
-            local Request = HTTP_QUEUE[I, table]
+        for(I = 1, LIB_HTTP_QUEUE:count()) {
+            local Request = LIB_HTTP_QUEUE[I, table]
             if(fileName() == "requests/" + Request["id", number] + "-done.json") {
                 eEventPush("http.complete", 0, table(
                     "request" = Request,
                     "response" = jsonDecode(fileRead())
                 ))
-                HTTP_QUEUE:remove(I)
+                LIB_HTTP_QUEUE:remove(I)
                 break
             }
         }
@@ -117,3 +175,4 @@ if(fileClk()) {
     } elseif(fileStatus() == _FILE_UNKNOWN) {
     }
 }
+]#
