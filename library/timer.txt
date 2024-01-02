@@ -1,131 +1,150 @@
+@name library/timer
 @persist LIB_TIMERS:table
 @persist LIB_TIMERS_DATA:table
 
-if(first() || dupefinished()) {
+if(first() | dupefinished()) {
     LIB_TIMERS = table()
     LIB_TIMERS_DATA = table()
     
     function void timer(Name:string, Delay:number, Data:angle) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:array) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:bone) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:complex) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:damage) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:entity) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:matrix) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:matrix2) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:matrix4) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:number) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:quaternion) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:ranger) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:string) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:table) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:vector) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:vector2) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:vector4) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
     }
     
     function void timer(Name:string, Delay:number, Data:wirelink) {
-        if(!LIB_TIMERS:exists(Name)) {
+        local Timers = invert(getTimers())
+        if(!Timers:exists(Name)) {
             LIB_TIMERS[Name, table] = table("data" = Data)
             timer(Name, Delay)
         }
@@ -156,9 +175,11 @@ if(first() || dupefinished()) {
             return ((clkName() != "" || clk("")) && timerGetType() == "xdm") ? LIB_TIMERS_DATA["data", damage] : damage()
         }
     #else
-        function damage timerGetDamage() {
-            return ((clkName() != "" || clk("")) && timerGetType() == "xdm") ? LIB_TIMERS_DATA["data", damage] : table()["data", damage]
-        }
+        #ifdef wirelink:damage(string)
+            function damage timerGetDamage() {
+                return ((clkName() != "" || clk("")) && timerGetType() == "xdm") ? LIB_TIMERS_DATA["data", damage] : table()["data", damage]
+            }
+        #endif
     #endif
     
     function matrix timerGetMatrix() {
