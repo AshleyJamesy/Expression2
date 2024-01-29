@@ -1,0 +1,17 @@
+@name C4
+@model models/weapons/w_sb_planted.mdl
+
+if(first() || dupefinished()) {
+    soundPlay("ballistic_shields/bomb_ticking.wav", 3.36, "ballistic_shields/bomb_ticking.wav")
+    timer("explode", 3.36 * 1000)
+}
+
+if(clk("explode")) {
+    soundPlay("weapons/c4/c4_explode1.wav", 5.934, "weapons/c4/c4_explode1.wav")
+    entity():setAlpha(0)
+    timer("remove", 5.934 * 1000)
+}
+
+if(clk("remove")) {
+    selfDestruct()
+}

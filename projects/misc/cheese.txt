@@ -1,0 +1,73 @@
+@name Cheese
+@model models/foodnhouseholditems/cheesewheel1c.mdl
+
+#works on this chip
+#when we press e on the chip
+event chipUsed(Player:entity) {
+    local SoundList = array(
+        "ambient/animal/rodent_scratch_1.wav",
+        "ambient/animal/rodent_scratch_short_1.wav",
+        "ambient/animal/rodent_scratch_short_2.wav",
+        "ambient/animal/rodent_scratch_short_3.wav",
+        "ambient/animal/rodent_scratch_short_4.wav",
+        "minirat/d1.wav",
+        "minirat/d3.wav",
+        "minirat/s1.wav",
+        "minirat/s2.wav",
+        "minirat/s3.wav"
+    )
+    
+    entity():soundPlay(Player:id() + "-" + randint(1, 255), 1, SoundList[randint(1, SoundList:count()), string])
+}
+
+#works on all your cheese
+#when player presses any key on their keyboard
+event keyPressed(Player:entity, _:string, Down:number, KeyBind:string) {
+    local SoundList = array(
+        "ambient/animal/rodent_scratch_1.wav",
+        "ambient/animal/rodent_scratch_short_1.wav",
+        "ambient/animal/rodent_scratch_short_2.wav",
+        "ambient/animal/rodent_scratch_short_3.wav",
+        "ambient/animal/rodent_scratch_short_4.wav",
+        "minirat/d1.wav",
+        "minirat/d3.wav",
+        "minirat/s1.wav",
+        "minirat/s2.wav",
+        "minirat/s3.wav"
+    )
+    
+    local CheeseFound = 0
+                        
+    #check if they pressed their use key and it's being pressed down
+    if(KeyBind == "use" && Down == 1) {
+        
+        #get the entity they looking at
+        local AimEntity = Player:aimEntity()
+        
+        #check if they are actually looking at an entity
+        if(AimEntity:isValid()) {
+            
+            #check if this is my prop
+            if(AimEntity:owner() == owner()) {
+                
+                #check if we are close to the prop
+                if(Player:pos():distance(AimEntity:pos()) < 150) {
+                    
+                    #check if the prop is cheese
+                    if(AimEntity:model() == "models/foodnhouseholditems/cheesewheel1c.mdl") {
+                        CheeseFound = 1
+                        #play sound
+                        AimEntity:soundPlay(Player:id() + "-" + randint(1, 255), 1, SoundList[randint(1, SoundList:count()), string])
+                        AimEntity:setTrails(18,13,0.5,"trails/smoke",vec(255,190,0),255)
+                    }
+                }
+            }
+        }
+        
+        if(!CheeseFound) {
+            if(Player == owner()) {
+                Player:soundPlay(Player:id() + "-" + randint(1, 255), 1, SoundList[randint(1, SoundList:count()), string])
+            }
+        }
+    }
+}
