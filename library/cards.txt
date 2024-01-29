@@ -8,8 +8,8 @@ if(first() | dupefinished()) {
             LIB_CARDS:pushTable(table( "suit" = Suit, "value" = Value ))
         }
     }
-    
-    function table cards() {
-        return LIB_CARDS:clone()
-    }
+}
+
+function table cards() {
+    return LIB_CARDS:clone()
 }

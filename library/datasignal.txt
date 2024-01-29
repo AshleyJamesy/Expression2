@@ -1,79 +1,77 @@
 @name library/datasignal
 
-if(first() | dupefinished()) {
-    function void entity:dsSend(Signal:string, Data:angle) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:array) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:bone) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:complex) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:damage) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:entity) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:function) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:matrix) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:matrix2) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:matrix4) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:number) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:quaternion) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:ranger) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:string) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:table) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:vector) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:vector2) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:vector4) {
-        dsSendDirect(Signal, This, Data)
-    }
-    
-    function void entity:dsSend(Signal:string, Data:wirelink) {
-        dsSendDirect(Signal, This, Data)
-    }
+function void entity:dsSend(Signal:string, Data:angle) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:array) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:bone) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:complex) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:damage) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:entity) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:function) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:matrix) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:matrix2) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:matrix4) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:number) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:quaternion) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:ranger) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:string) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:table) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:vector) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:vector2) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:vector4) {
+    dsSendDirect(Signal, This, Data)
+}
+
+function void entity:dsSend(Signal:string, Data:wirelink) {
+    dsSendDirect(Signal, This, Data)
 }
