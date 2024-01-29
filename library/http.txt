@@ -65,7 +65,6 @@
 
 if(first() | dupefinished()) {
     runOnFile(1)
-    runOnList(1)
     
     LIB_HTTP = table(
         "queue" = table(),
@@ -73,26 +72,26 @@ if(first() | dupefinished()) {
         "clkname" = "",
         "clkdata" = table()
     )
-    
-    function void httpRequest(Name:string, Type:string, Url:string, Headers:table, Body:string) {
-        local Queue = LIB_HTTP["queue", table]
-        Queue:pushTable(table(
-            "name" = Name,
-            "url" = Url,
-            "method" = Type:upper(),
-            "headers" = Headers,
-            "body" = Body
-        ))
-        timer("library.http.queue", 0)
-    }
-    
-    function void httpRequest(Name:string, Type:string, Url:string, Headers:table) {
-        httpRequest(Name, Type, Url, Headers, "")
-    }
-    
-    function number httpClk() {
-        return LIB_HTTP["clk", number]
-    }
+}
+
+function void httpRequest(Name:string, Type:string, Url:string, Headers:table, Body:string) {
+    local Queue = LIB_HTTP["queue", table]
+    Queue:pushTable(table(
+        "name" = Name,
+        "url" = Url,
+        "method" = Type:upper(),
+        "headers" = Headers,
+        "body" = Body
+    ))
+    timer("library.http.queue", 0)
+}
+
+function void httpRequest(Name:string, Type:string, Url:string, Headers:table) {
+    httpRequest(Name, Type, Url, Headers, "")
+}
+
+function number httpClk() {
+    return LIB_HTTP["clk", number]
 }
 
 LIB_HTTP["clk", number] = 0
@@ -125,54 +124,3 @@ if(fileClk()) {
         break
     }
 }
-
-#[
-if(eEventClk("http.request")) {
-    local Request = eEventGetPayload()
-    
-    switch(Request["method", string]) {
-        case "GET",
-            httpGet(Request["name", string], Request["url", string], Request["headers", table])
-        break
-        case "POST",
-            httpPost(Request["name", string], Request["url", string], Request["headers", table], Request["body", string])
-        break
-    }
-}
-
-if(eEventClk("http.check")) {
-    LIB_LIB_HTTP_QUEUED = 0
-    if(LIB_HTTP_QUEUE:count() > 0) {
-        LIB_LIB_HTTP_QUEUED = 1
-        eEventPush("http.check", 1000)
-    }
-    
-    if(fileCanLoad()) {
-        foreach(_:number, Request:table = LIB_HTTP_QUEUE) {
-            fileLoad("requests/" + Request["id", number] + "-done.json")
-        }
-    }
-}
-
-if(fileClk()) {
-    if(fileStatus() == _FILE_OK) {
-        fileWrite(fileName(), "")
-        
-        for(I = 1, LIB_HTTP_QUEUE:count()) {
-            local Request = LIB_HTTP_QUEUE[I, table]
-            if(fileName() == "requests/" + Request["id", number] + "-done.json") {
-                eEventPush("http.complete", 0, table(
-                    "request" = Request,
-                    "response" = jsonDecode(fileRead())
-                ))
-                LIB_HTTP_QUEUE:remove(I)
-                break
-            }
-        }
-    } elseif(fileStatus() == _FILE_404) {
-    } elseif(fileStatus() == _FILE_TIMEOUT) {
-    } elseif(fileStatus() == _FILE_TRANSFER_ERROR) {
-    } elseif(fileStatus() == _FILE_UNKNOWN) {
-    }
-}
-]#

@@ -1,38 +1,46 @@
 @name library/string
 
-if(first() | dupefinished()) {
-    function number string:startsWith(String:string) {
-        return This:left(String:length()) == String
-    }
+function number string:startsWith(String:string) {
+    return This:left(String:length()) == String
+}
+
+function number string:endsWith(String:string) {
+    return This:right(String:length()) == String
+}
+
+function string string:comma() {
+    local Match = 
+        This:match("([-]?)(%d+)([.]?%d*)")
     
-    function number string:endsWith(String:string) {
-        return This:right(String:length()) == String
-    }
+    return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
+}
+
+function string number:comma() {
+    return This:toString():comma()
+}
+
+function string string:proper() {
+    local Words = table()
     
-    function string string:comma() {
-        local Match = 
-            This:match("([-]?)(%d+)([.]?%d*)")
-        
-        return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
-    }
-    
-    function string number:comma() {
-        return This:toString():comma()
-    }
-    
-    function string string:proper() {
-        local Words = table()
-        
-        local String = This
-        foreach(_:number, Match:array = This:gmatch("(%w)(%w+)")) {
-            local Word = Match[1, string] + Match[2, string]
-            if(!Words:exists(Word)) {
-                Words[Word, number] = 1
-                String = String:replace(Word, Match[1, string]:upper() + Match[2, string]:lower())
-            }
+    local String = This
+    foreach(_:number, Match:array = This:gmatch("(%w)(%w+)")) {
+        local Word = Match[1, string] + Match[2, string]
+        if(!Words:exists(Word)) {
+            Words[Word, number] = 1
+            String = String:replace(Word, Match[1, string]:upper() + Match[2, string]:lower())
         }
-        
-        return String
     }
+    
+    return String
+}
+
+function string number:abbreviate() {
+    foreach(K:number, Magnitude:string = array("T", "B", "M", "K", "")) {
+        local Factor = 10 ^ (3 * ((6 - K) - 1))
+        if(This >= Factor) {
+            return format("%.1f%s", This / Factor, Magnitude)
+        }
+    }
+    return This:toString()
 }
 

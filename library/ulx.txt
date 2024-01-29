@@ -1,13 +1,11 @@
 @name library/ulx
 
-if(first() | dupefinished()) {
-    function entity:ulxSendPrivateMessage(String:string) {
-        if(This:isValid() && This:isPlayer()) {
-            if(This == owner()) {
-                print(String)
-            } else {
-                concmd("ulx psay $" + This:steamID() + " \"" + String + "\"")
-            }
+function entity:ulxSendPrivateMessage(String:string) {
+    if(This:isValid() && This:isPlayer()) {
+        if(This == owner()) {
+            print(String)
+        } else {
+            concmd("ulx psay $" + This:steamID() + " \"" + String + "\"")
         }
     }
 }

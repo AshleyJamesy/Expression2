@@ -1,66 +1,64 @@
 @name library/fpp
 
-if(first() | dupefinished()) {
-    function void entity:fppShare(Physgun:number, Gravgun:number, Use:number, Damage:number, Toolgun:number) {
-        if(!This:isValid()) {
-            return
-        }
-        
-        local Command = 
-            "FPP_ShareProp " + This:id() + " SharePhysgun1 " + (Physgun > 0) + ";" +
-            "FPP_ShareProp " + This:id() + " ShareGravgun1 " + (Gravgun > 0) + ";" +
-            "FPP_ShareProp " + This:id() + " SharePlayerUse1 " + (Use > 0) + ";" +
-            "FPP_ShareProp " + This:id() + " ShareEntityDamage1 " + (Damage > 0) + ";" +
-            "FPP_ShareProp " + This:id() + " ShareToolgun1 " + (Toolgun > 0)
-        
-        concmd(Command)
+function void entity:fppShare(Physgun:number, Gravgun:number, Use:number, Damage:number, Toolgun:number) {
+    if(!This:isValid()) {
+        return
     }
     
-    function void entity:fppShare(Type:string, Share:number) {
-        if(!This:isValid()) {
-            return
-        }
-        
-        switch(Type) {
-            case "physgun",
-                concmd("FPP_ShareProp " + This:id() + " SharePhysgun1 " + (Share > 0))
-            break
-            case "gravgun",
-                concmd("FPP_ShareProp " + This:id() + " ShareGravgun1 " + (Share > 0))
-            break
-            case "use",
-                concmd("FPP_ShareProp " + This:id() + " SharePlayerUse1 " + (Share > 0))
-            break
-            case "damage",
-                concmd("FPP_ShareProp " + This:id() + " ShareEntityDamage1 " + (Share > 0))
-            break
-            case "toolgun",
-                concmd("FPP_ShareProp " + This:id() + " ShareToolgun1 " + (Share > 0))
-            break
-            default,
-            break
-        }
-    }
+    local Command = 
+        "FPP_ShareProp " + This:id() + " SharePhysgun1 " + (Physgun > 0) + ";" +
+        "FPP_ShareProp " + This:id() + " ShareGravgun1 " + (Gravgun > 0) + ";" +
+        "FPP_ShareProp " + This:id() + " SharePlayerUse1 " + (Use > 0) + ";" +
+        "FPP_ShareProp " + This:id() + " ShareEntityDamage1 " + (Damage > 0) + ";" +
+        "FPP_ShareProp " + This:id() + " ShareToolgun1 " + (Toolgun > 0)
     
-    function void entity:fppShare(Share:number) {
-        This:fppShare(Share, Share, Share, Share, Share)
-    }
-    
-    #ifdef entity:userID()
-    function void entity:fppShare(Player:entity, Share:number) {
-        if(!This:isValid()) {
-            return
-        }
-        
-        if(!Player:isValid()) {
-            return
-        }
-        
-        if(!Player:isPlayer()) {
-            return
-        }
-        
-        concmd("FPP_ShareProp " + This:id() + " " + Player:userID() + " " + (Share > 0))
-    }
-    #endif
+    concmd(Command)
 }
+
+function void entity:fppShare(Type:string, Share:number) {
+    if(!This:isValid()) {
+        return
+    }
+    
+    switch(Type) {
+        case "physgun",
+            concmd("FPP_ShareProp " + This:id() + " SharePhysgun1 " + (Share > 0))
+        break
+        case "gravgun",
+            concmd("FPP_ShareProp " + This:id() + " ShareGravgun1 " + (Share > 0))
+        break
+        case "use",
+            concmd("FPP_ShareProp " + This:id() + " SharePlayerUse1 " + (Share > 0))
+        break
+        case "damage",
+            concmd("FPP_ShareProp " + This:id() + " ShareEntityDamage1 " + (Share > 0))
+        break
+        case "toolgun",
+            concmd("FPP_ShareProp " + This:id() + " ShareToolgun1 " + (Share > 0))
+        break
+        default,
+        break
+    }
+}
+
+function void entity:fppShare(Share:number) {
+    This:fppShare(Share, Share, Share, Share, Share)
+}
+
+#ifdef entity:userID()
+function void entity:fppShare(Player:entity, Share:number) {
+    if(!This:isValid()) {
+        return
+    }
+    
+    if(!Player:isValid()) {
+        return
+    }
+    
+    if(!Player:isPlayer()) {
+        return
+    }
+    
+    concmd("FPP_ShareProp " + This:id() + " " + Player:userID() + " " + (Share > 0))
+}
+#endif
