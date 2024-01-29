@@ -1,6 +1,7 @@
 @name library/tau
 
-function entity:ulxSendPrivateMessage(String:string) {
+#ifdef tauSendChatMsg(s)
+function entity:tauSendPrivateMessage(String:string) {
     if(!This:isValid()) {
         return
     }
@@ -15,3 +16,4 @@ function entity:ulxSendPrivateMessage(String:string) {
         This:tauSendChatMsg(String)
     }
 }
+#endif
