@@ -1,10 +1,10 @@
-# EGP 8.0 - Quick Start Guide
+# EGP - Quick Start Guide
 
 ## Initial Setup
 To begin we need to setup some starting code, below is the example.
 ```lua
 @name Example
-#include "library/egp/8.0/init"
+#include "library/egp"
 
 if(egpWirelinkChanged()) {
 	egpClear(512,512,function(Event:table, _:function) {
@@ -116,7 +116,7 @@ Outlines the element with thickness of `3px`
 "outline" = 3
 ```
 ## Color Elements
-Elements can be colored dusing `vec4(r,g,b,a)`
+Elements can be colored using `vec4(r,g,b,a)`
 ### Examples:
 Colors the element white
 ```lua
