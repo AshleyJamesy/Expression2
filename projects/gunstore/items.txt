@@ -1,138 +1,136 @@
-if(first()||dupefinished()) {
-    function table sStoreItems() {
-        local Items = table()
-        
-        #PISTOLS
-        local Pistols = table()
-        Items["pistols", table] = Pistols
-        Pistols:pushTable(table( "name" =  "Desert Eagle", "price" = 1050, "max" = 2 ))
-        Pistols:pushTable(table( "name" =  "MP 412 Rex", "price" = 1950, "max" = 2 ))
-        Pistols:pushTable(table( "name" =  "M1911", "price" = 750, "max" = 2 ))
-        Pistols:pushTable(table( "name" =  "P99", "price" = 800, "max" = 2 ))
-        Pistols:pushTable(table( "name" =  "PM Makarov", "price" = 800, "max" = 2 ))
-        
-        #SMGS
-        local Smgs = table()
-        Items["smgs", table] = Smgs
-        Smgs:pushTable(table( "name" =  "H&K G36C", "price" = 2990, "max" = 1 ))
-        Smgs:pushTable(table( "name" =  "MAC-11", "price" = 1430, "max" = 1 ))
-        Smgs:pushTable(table( "name" =  "MP5", "price" = 1990, "max" = 1 ))
-        Smgs:pushTable(table( "name" =  "MP7", "price" = 1650, "max" = 1 ))
-        Smgs:pushTable(table( "name" =  "MP9", "price" = 1400, "max" = 1 ))
-        Smgs:pushTable(table( "name" =  "UMP 45", "price" = 1950, "max" = 1 ))
-        
-        #SHOTGUNS
-        local Shotguns = table()
-        Items["shotguns", table] = Shotguns
-        Shotguns:pushTable(table( "name" =  "M3 Super 90", "price" = 3250, "max" = 1 ))
-        Shotguns:pushTable(table( "name" =  "M4 Super 90", "price" = 3900, "max" = 1 ))
-        Shotguns:pushTable(table( "name" =  "Saiga-12K", "price" = 4000, "max" = 1 ))
-        Shotguns:pushTable(table( "name" =  "Shorty Shotgun", "price" = 1600, "max" = 1 ))
-        
-        #RIFLES
-        local Rifles = table()
-        Items["rifles", table] = Rifles
-        Rifles:pushTable(table( "name" =  "AR-15", "price" = 3950, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "AK-74", "price" = 3800, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "AN-94", "price" = 4800, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "FAMAS", "price" = 3750, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "FN FAL", "price" = 5500, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "G3A3", "price" = 2950, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "Magpul Masada", "price" = 6250, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "M14", "price" = 3780, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "M16A2", "price" = 4140, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "M16A4", "price" = 4260, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "M4A1", "price" = 4320, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "SCAR-H", "price" = 3625, "max" = 1 ))
-        Rifles:pushTable(table( "name" =  "XM8", "price" = 4500, "max" = 1 ))
-        
-        #SNIPERS
-        local Snipers = table()
-        Items["snipers", table] = Snipers
-        Snipers:pushTable(table( "name" =  "AWM Sniper Rifle", "price" = 6800, "max" = 1 ))
-        Snipers:pushTable(table( "name" =  "G2 Contender", "price" = 2000, "max" = 1 ))
-        Snipers:pushTable(table( "name" =  "AL115 Rifle", "price" = 5600, "max" = 1 ))
-        Snipers:pushTable(table( "name" =  "M98B Sniper Rifle", "price" = 6800, "max" = 1 ))
-        Snipers:pushTable(table( "name" =  "SVD", "price" = 7000, "max" = 1 ))
-        
-        #HEAVY
-        local Heavy = table()
-        Items["heavy", table] = Heavy
-        Heavy:pushTable(table( "name" =  "M249 LMG", "price" = 13600, "max" = 1 ))
-        
-        #ARMOUR
-        local Armour = table()
-        Items["armor", table] = Armour
-        Armour:pushTable(table( "name" =  "Light Armor", "price" = 1000, "max" = 1 ))
-        Armour:pushTable(table( "name" =  "Medium Armor", "price" = 1500, "max" = 1 ))
-        Armour:pushTable(table( "name" =  "Heavy Armor", "price" = 2000, "max" = 1 ))
-        
-        #EXPLOSIVES
-        local Explosives = table()
-        Items["explosives", table] = Explosives
-        Explosives:pushTable(table(	"name" = "EX41 Grenade Launcher", "price" = 30000,	"max" = 1 ))
-        Explosives:pushTable(table( "name" = "IED Detonator", "price" = 37500, "max" = 1 ))
-        Explosives:pushTable(table(	"name" = "M202 Rocker Launcher",	"price" = 64000, "max" = 1 ))
-        Explosives:pushTable(table( "name" = "M79 Grenade Launcher", "price" = 31250, "max" = 1 ))
-        Explosives:pushTable(table( "name" = "Milkor Mk1 Grenade Launcher", "price" = 43750, "max" = 1 ))
-        Explosives:pushTable(table( "name" = "Proximity Mine", "price" = 22000, "max" = 1 ))
-        Explosives:pushTable(table( "name" = "RPG-7", "price" = 43750,	"max" = 1 ))
-        Explosives:pushTable(table(	"name" = "Timed C4", "price" = 57500, 	"max" = 1 ))
-        
-        #MELEE
-        local Melee = table()
-        Items["melee", table] = Melee
-        Melee:pushTable(table( "name" = "Throwing Knife", "price" = 2000, "max" = 1 ))
-        
-        return Items
-    }
+function table sStoreItems() {
+    local Items = table()
     
-    function table sStoreCategories() {
-        return table(
-            table(
-                "name" = "pistols",
-                "icon" = "a"
-            ),
-            table(
-                "name" = "smgs",
-                "icon" = "q"
-            ),
-            table(
-                "name" = "shotguns",
-                "icon" = "B"
-            ),
-            table(
-                "name" = "rifles",
-                "icon" = "b"
-            ),
-            table(
-                "name" = "snipers",
-                "icon" = "r"
-            ),
-            table(
-                "name" = "heavy",
-                "icon" = "z"
-            ),
-            table(
-                "name" = "armor",
-                "icon" = "p"
-            ),
-            table(
-                "name" = "explosives",
-                "icon" = "O"
-            ),
-            table(
-                "name" = "melee",
-                "icon" = "j"
-            ),
-            table(
-                "name" = "drugs",
-                "icon" = "F"
-            ),
-            table(
-                "name" = "cart",
-                "icon" = ""
-            )
+    #PISTOLS
+    local Pistols = table()
+    Items["pistols", table] = Pistols
+    Pistols:pushTable(table( "name" =  "Desert Eagle", "price" = 1050, "max" = 2 ))
+    Pistols:pushTable(table( "name" =  "MP 412 Rex", "price" = 1950, "max" = 2 ))
+    Pistols:pushTable(table( "name" =  "M1911", "price" = 750, "max" = 2 ))
+    Pistols:pushTable(table( "name" =  "P99", "price" = 800, "max" = 2 ))
+    Pistols:pushTable(table( "name" =  "PM Makarov", "price" = 800, "max" = 2 ))
+    
+    #SMGS
+    local Smgs = table()
+    Items["smgs", table] = Smgs
+    Smgs:pushTable(table( "name" =  "H&K G36C", "price" = 2990, "max" = 1 ))
+    Smgs:pushTable(table( "name" =  "MAC-11", "price" = 1430, "max" = 1 ))
+    Smgs:pushTable(table( "name" =  "MP5", "price" = 1990, "max" = 1 ))
+    Smgs:pushTable(table( "name" =  "MP7", "price" = 1650, "max" = 1 ))
+    Smgs:pushTable(table( "name" =  "MP9", "price" = 1400, "max" = 1 ))
+    Smgs:pushTable(table( "name" =  "UMP 45", "price" = 1950, "max" = 1 ))
+    
+    #SHOTGUNS
+    local Shotguns = table()
+    Items["shotguns", table] = Shotguns
+    Shotguns:pushTable(table( "name" =  "M3 Super 90", "price" = 3250, "max" = 1 ))
+    Shotguns:pushTable(table( "name" =  "M4 Super 90", "price" = 3900, "max" = 1 ))
+    Shotguns:pushTable(table( "name" =  "Saiga-12K", "price" = 4000, "max" = 1 ))
+    Shotguns:pushTable(table( "name" =  "Shorty Shotgun", "price" = 1600, "max" = 1 ))
+    
+    #RIFLES
+    local Rifles = table()
+    Items["rifles", table] = Rifles
+    Rifles:pushTable(table( "name" =  "AR-15", "price" = 3950, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "AK-74", "price" = 3800, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "AN-94", "price" = 4800, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "FAMAS", "price" = 3750, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "FN FAL", "price" = 5500, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "G3A3", "price" = 2950, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "Magpul Masada", "price" = 6250, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "M14", "price" = 3780, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "M16A2", "price" = 4140, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "M16A4", "price" = 4260, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "M4A1", "price" = 4320, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "SCAR-H", "price" = 3625, "max" = 1 ))
+    Rifles:pushTable(table( "name" =  "XM8", "price" = 4500, "max" = 1 ))
+    
+    #SNIPERS
+    local Snipers = table()
+    Items["snipers", table] = Snipers
+    Snipers:pushTable(table( "name" =  "AWM Sniper Rifle", "price" = 6800, "max" = 1 ))
+    Snipers:pushTable(table( "name" =  "G2 Contender", "price" = 2000, "max" = 1 ))
+    Snipers:pushTable(table( "name" =  "AL115 Rifle", "price" = 5600, "max" = 1 ))
+    Snipers:pushTable(table( "name" =  "M98B Sniper Rifle", "price" = 6800, "max" = 1 ))
+    Snipers:pushTable(table( "name" =  "SVD", "price" = 7000, "max" = 1 ))
+    
+    #HEAVY
+    local Heavy = table()
+    Items["heavy", table] = Heavy
+    Heavy:pushTable(table( "name" =  "M249 LMG", "price" = 13600, "max" = 1 ))
+    
+    #ARMOUR
+    local Armour = table()
+    Items["armor", table] = Armour
+    Armour:pushTable(table( "name" =  "Light Armor", "price" = 1000, "max" = 1 ))
+    Armour:pushTable(table( "name" =  "Medium Armor", "price" = 1500, "max" = 1 ))
+    Armour:pushTable(table( "name" =  "Heavy Armor", "price" = 2000, "max" = 1 ))
+    
+    #EXPLOSIVES
+    local Explosives = table()
+    Items["explosives", table] = Explosives
+    Explosives:pushTable(table(	"name" = "EX41 Grenade Launcher", "price" = 30000,	"max" = 1 ))
+    Explosives:pushTable(table( "name" = "IED Detonator", "price" = 37500, "max" = 1 ))
+    Explosives:pushTable(table(	"name" = "M202 Rocker Launcher",	"price" = 64000, "max" = 1 ))
+    Explosives:pushTable(table( "name" = "M79 Grenade Launcher", "price" = 31250, "max" = 1 ))
+    Explosives:pushTable(table( "name" = "Milkor Mk1 Grenade Launcher", "price" = 43750, "max" = 1 ))
+    Explosives:pushTable(table( "name" = "Proximity Mine", "price" = 22000, "max" = 1 ))
+    Explosives:pushTable(table( "name" = "RPG-7", "price" = 43750,	"max" = 1 ))
+    Explosives:pushTable(table(	"name" = "Timed C4", "price" = 57500, 	"max" = 1 ))
+    
+    #MELEE
+    local Melee = table()
+    Items["melee", table] = Melee
+    Melee:pushTable(table( "name" = "Throwing Knife", "price" = 2000, "max" = 1 ))
+    
+    return Items
+}
+
+function table sStoreCategories() {
+    return table(
+        table(
+            "name" = "pistols",
+            "icon" = "a"
+        ),
+        table(
+            "name" = "smgs",
+            "icon" = "q"
+        ),
+        table(
+            "name" = "shotguns",
+            "icon" = "B"
+        ),
+        table(
+            "name" = "rifles",
+            "icon" = "b"
+        ),
+        table(
+            "name" = "snipers",
+            "icon" = "r"
+        ),
+        table(
+            "name" = "heavy",
+            "icon" = "z"
+        ),
+        table(
+            "name" = "armor",
+            "icon" = "p"
+        ),
+        table(
+            "name" = "explosives",
+            "icon" = "O"
+        ),
+        table(
+            "name" = "melee",
+            "icon" = "j"
+        ),
+        table(
+            "name" = "medical",
+            "icon" = "F"
+        ),
+        table(
+            "name" = "cart",
+            "icon" = ""
         )
-    }
+    )
 }
