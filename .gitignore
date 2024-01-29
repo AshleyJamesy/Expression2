@@ -3,4 +3,5 @@ _helloworld_.txt
 _shutdown_.txt
 _tabs_.txt
 
+untracked/
 untracked/*.txt
