@@ -1,0 +1,121 @@
+@persist Program:table
+
+if(first() || dupefinished()) {
+    
+    #TODO: compile string to opcodes
+    function table compile(S:string) {
+        return table(
+            "scope" = table(),
+            "stack" = table(),
+            "i" = 1,
+            "ops" = table(
+                #A = 0
+                table("opcode" = "push", "value" = 1),
+                table("opcode" = "set", "value" = "A"),
+                
+                #A = A + 1
+                table("opcode" = "get", "value" = "A"),
+                table("opcode" = "push", "value" = 1),
+                table("opcode" = "add"),
+                table("opcode" = "set", "value" = "A"),
+                
+                #A < 100
+                table("opcode" = "get", "value" = "A"),
+                table("opcode" = "push", "value" = 100),
+                table("opcode" = "greater"),
+                
+                #while(A < 100)
+                table("opcode" = "jnz", "value" = 7)
+            )
+        )
+    }
+    
+    function number table:opcode(Stack:table, Scope:table) {
+        switch(This["opcode", string]) {
+            #pushes number onto stack
+            case "push",
+                local A = This["value", number]
+                Stack:pushNumber(A)
+            break
+            #pops number off stack and sets in scope
+            case "set",
+                local Name = This["value", string]
+                Scope[Name, number] = Stack:popNumber()
+            break
+            #pushes number onto stack from scope
+            case "get",
+                local Name = This["value", string]
+                Stack:pushNumber(Scope[Name, number])
+            break
+            #pops 2 numbers off stack and pushes result to stack
+            case "add",
+                local A = Stack:popNumber()
+                local B = Stack:popNumber()
+                Stack:pushNumber(A + B)
+            break
+            #pops 2 numbers off stack and pushes result to stack
+            case "sub",
+                local A = Stack:popNumber()
+                local B = Stack:popNumber()
+                Stack:pushNumber(A - B)
+            break
+            #pops 2 numbers off stack and pushes result to stack
+            case "mul",
+                local A = Stack:popNumber()
+                local B = Stack:popNumber()
+                Stack:pushNumber(A * B)
+            break
+            #pops 2 numbers off stack and pushes result to stack
+            case "div",
+                local A = Stack:popNumber()
+                local B = Stack:popNumber()
+                Stack:pushNumber(A / B)
+            break
+            case "greater",
+                local A = Stack:popNumber()
+                local B = Stack:popNumber()
+                Stack:pushNumber(A > B)
+            break
+            case "jmp",
+                return -This["value", number]
+            break
+            case "jnz",
+                if(Stack:popNumber() != 0) {
+                    return -This["value", number]
+                }
+            break
+        }
+        
+        return 1
+    }
+    
+    function number table:cycle() {
+        local Ops = This["ops", table]
+        
+        local I = This["i", number]
+        while(I <= Ops:count() && perf(99)) {
+            local Opcode = Ops[I, table]
+            I += Opcode:opcode(This["stack", table], This["scope", table])
+            This["i", number] = I
+        }
+        
+        if(I > Ops:count()) {
+            return 1
+        }
+        
+        return 0
+    }
+    
+    Program = compile("A = 0; while(A < 100) { A = A + 1; }")
+    timer("cycle", 0)
+}
+
+if(clk("cycle")) {
+    if(!Program:cycle()) {
+        printTable(Program["scope", table])
+        timer("cycle", 0)
+    } else {
+        #program exited
+        printTable(Program["scope", table])
+    }
+}

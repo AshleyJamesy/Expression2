@@ -1,20 +1,20 @@
-if(first() || dupefinished()) {
-    function entity wirelink:userRanger(Length:number) {
-        local UserEntity = This:entity()
-        if(!UserEntity:isValid()) {
-            return noentity()
-        }
-        
-        if(UserEntity:type() != "gmod_wire_user") {
-            error("userRanger entity must be gmod_wire_user")
-        }
-        
-        rangerReset()
-        rangerFlags("IE")
-        rangerFilter(UserEntity)
-        local Ranger = rangerOffset(Length, UserEntity:toWorld(UserEntity:up()), UserEntity:up())
-        #local Distance = Ranger:distance()
-        
-        return Ranger:entity()
+@name library/user-ranger
+
+function entity wirelink:userRanger(Length:number) {
+    local UserEntity = This:entity()
+    if(!UserEntity:isValid()) {
+        return noentity()
     }
+    
+    if(UserEntity:type() != "gmod_wire_user") {
+        error("userRanger entity must be gmod_wire_user")
+    }
+    
+    rangerReset()
+    rangerFlags("IE")
+    rangerFilter(UserEntity)
+    local Ranger = rangerOffset(Length, UserEntity:toWorld(UserEntity:up()), UserEntity:up())
+    #local Distance = Ranger:distance()
+    
+    return Ranger:entity()
 }

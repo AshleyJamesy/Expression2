@@ -1,9 +1,161 @@
-@persist NO_TABLE:table
+@name library/table
+@persist LIB_TABLE_NOTABLE:table
 
-if(first() || dupefinished()) {
-    NO_TABLE = table()
-    
-    function table notable() {
-        return NO_TABLE
+if(first() | dupefinished()) {
+    LIB_TABLE_NOTABLE = table()
+}
+
+function table notable() {
+    return LIB_TABLE_NOTABLE
+}
+
+function table table:copy() {
+    local TypeIds = This:typeids()
+    local Table = table()
+    foreach(_:number, Key:string = This:keys()) {
+        switch(TypeIds[Key, string]) {
+            case "a",
+                Table:pushAngle(This[Key, angle])
+            break
+            case "r",
+                Table:pushArray(This[Key, array])
+            break
+            case "b",
+                Table:pushBone(This[Key, bone])
+            break
+            case "c",
+                Table:pushComplex(This[Key, complex])
+            break
+            case "xdm",
+                Table:pushDamage(This[Key, damage])
+            break
+            case "e",
+                Table:pushEntity(This[Key, entity])
+            break
+            case "m",
+                Table:pushMatrix(This[Key, matrix])
+            break
+            case "xm2",
+                Table:pushMatrix2(This[Key, matrix2])
+            break
+            case "xm4",
+                Table:pushMatrix4(This[Key, matrix4])
+            break
+            case "n",
+                Table:pushNumber(This[Key, number])
+            break
+            case "q",
+                Table:pushQuaternion(This[Key, quaternion])
+            break
+            case "xrd",
+                Table:pushRanger(This[Key, ranger])
+            break
+            case "s",
+                Table:pushString(This[Key, string])
+            break
+            case "t",
+                Table:pushTable(This[Key, table])
+            break
+            case "v",
+                Table:pushVector(This[Key, vector])
+            break
+            case "xv2",
+                Table:pushVector2(This[Key, vector2])
+            break
+            case "xv4",
+                Table:pushVector4(This[Key, vector4])
+            break
+            case "xwl",
+                Table:pushWirelink(This[Key, wirelink])
+            break
+        }
     }
+    return Table
+}
+
+function table table:shuffle() {
+    local Clone = This:clone()
+    local TypeIds = Clone:typeidsArray()
+    This:clear()
+    
+    for(_ = 1, Clone:count()) {
+        local R = randint(1, Clone:count())
+        switch(TypeIds[R, string]) {
+            case "a",
+                This:pushAngle(Clone:removeAngle(R))
+            break
+            case "r",
+                This:pushArray(Clone:removeArray(R))
+            break
+            case "b",
+                This:pushBone(Clone:removeBone(R))
+            break
+            case "c",
+                This:pushComplex(Clone:removeComplex(R))
+            break
+            case "xdm",
+                This:pushDamage(Clone:removeDamage(R))
+            break
+            case "e",
+                This:pushEntity(Clone:removeEntity(R))
+            break
+            case "m",
+                This:pushMatrix(Clone:removeMatrix(R))
+            break
+            case "xm2",
+                This:pushMatrix2(Clone:removeMatrix2(R))
+            break
+            case "xm4",
+                This:pushMatrix4(Clone:removeMatrix4(R))
+            break
+            case "n",
+                This:pushNumber(Clone:removeNumber(R))
+            break
+            case "q",
+                This:pushQuaternion(Clone:removeQuaternion(R))
+            break
+            case "xrd",
+                This:pushRanger(Clone:removeRanger(R))
+            break
+            case "s",
+                This:pushString(Clone:removeString(R))
+            break
+            case "t",
+                This:pushTable(Clone:removeTable(R))
+            break
+            case "v",
+                This:pushVector(Clone:removeVector(R))
+            break
+            case "xv2",
+                This:pushVector2(Clone:removeVector2(R))
+            break
+            case "xv4",
+                This:pushVector4(Clone:removeVector4(R))
+            break
+            case "xwl",
+                This:pushWirelink(Clone:removeWirelink(R))
+            break
+        }
+    }
+    
+    return This
+}
+
+function table table:findTable(Method:function) {
+    foreach(K:number, Table:table = This) {
+        if(Method(Table, K)[number]) {
+            return Table
+        }
+    }
+    return notable()
+}
+
+function table table:filter(Method:function) {
+    local T = table()
+    foreach(K:number, Table:table = This) {
+        if(Method(Table, K)[number]) {
+            T:pushTable(Table)
+        }
+    }
+    return T
 }

@@ -1,0 +1,350 @@
+@name library/net
+@persist LIB_NET:table
+
+#include "library/crypt"
+#include "library/string"
+
+if(first() | dupefinished()) {
+    LIB_NET = table(
+        "network" = "",
+        "type" = "none",
+        "callbacks" = table(
+            "states" = table(),
+            "messages" = table()
+        ),
+        "server" = noentity(),
+        "clients" = table(),
+        "keys" = array()
+    )
+}
+
+function void netState(Message:string, Callback:function) {
+    if(LIB_NET["type", string] == "none") {
+        return
+    }
+    
+    local Callbacks = LIB_NET["callbacks", table]["states", table]
+    if(!Callbacks:exists(Message)) {
+        Callbacks[Message, array] = array()
+    }
+    local Methods = Callbacks[Message, array]
+    Methods:pushFunction(Callback)
+}
+
+function void netStateCallback(State:string, Sender:entity, Payload:table) {
+    local Callbacks = LIB_NET["callbacks", table]["states", table]
+    if(Callbacks:exists(State)) {
+        local Methods = Callbacks[State, array]
+        foreach(_:number, Callback:function = Methods) {
+            if(Callback(State, Sender, Payload)[number]) {
+                break
+            }
+        }
+    }
+}
+
+function void netReceive(Message:string, Callback:function) {
+    if(LIB_NET["type", string] == "none") {
+        return
+    }
+    
+    local Callbacks = LIB_NET["callbacks", table]["messages", table]
+    if(!Callbacks:exists(Message)) {
+        Callbacks[Message, array] = array()
+    }
+    local Methods = Callbacks[Message, array]
+    Methods:pushFunction(Callback)
+}
+
+function void netReceiveCallback(Type:string, Sender:entity, Payload:table) {
+    local Callbacks = LIB_NET["callbacks", table]["messages", table]
+    if(Callbacks:exists(Type)) {
+        local Methods = Callbacks[Type, array]
+        foreach(_:number, Callback:function = Methods) {
+            if(Callback(Type, Sender, Payload)[number]) {
+                break
+            }
+        }
+    }
+}
+
+function void netSendToServer(Type:string, Payload:table) {
+    if(LIB_NET["type", string] != "client" | !LIB_NET["server", entity]:isValid()) {
+        return
+    }
+    dsSendDirect("library.net." + Type, LIB_NET["server", entity], Payload)
+}
+
+function void entity:netSend(Type:string, Payload:table) {
+    if(LIB_NET["type", string] == "none") {
+        return
+    }
+    
+    if(!This:isValid()) {
+        return
+    }
+    
+    dsSendDirect("library.net." + Type, This, Payload)
+}
+
+function void netBroadcast(Type:string, Payload:table) {
+    if(LIB_NET["type", string] == "client") {
+        dsSend("library.net." + Type, LIB_NET["network", string], 2, Payload)
+    }
+    
+    if(LIB_NET["type", string] == "server") {
+        foreach(_:string, Client:entity = LIB_NET["client", table]) {
+            if(!Client:isValid()) {
+                continue
+            }
+            dsSendDirect("library.net." + Type, Client, Payload)
+        }
+    }
+}
+
+function void netServerStart(Network:string, Scope:number, Address:string, Password:string, Max:number, Callback:function) {
+    if(LIB_NET["type", string] != "none") {
+        return
+    }
+    
+    dsSetScope(Scope)
+    dsJoinGroup(Network)
+    
+    LIB_NET["type", string] = "server"
+    LIB_NET["keys", array] = Password:encryptKeys()
+    
+    netReceive("authentication.login", function(_:string, Sender:entity, Payload:table) {
+        local AddressEncrypted = Payload["address", string]
+        local PasswordEncrypted = Payload["password", string]
+        
+        if(AddressEncrypted:decrypt(LIB_NET["keys", array]) != Address) {
+            return 1
+        }
+        
+        if(PasswordEncrypted:decrypt(LIB_NET["keys", array]) != Password) {
+            return 1
+        }
+        
+        if(LIB_NET["clients", array]:count() == Max) {
+            Sender:netSend("authentication.failed", table(
+                "message" = "server full",
+                "signature" = "signature":encrypt(LIB_NET["keys", array])
+            ))
+            return 1
+        }
+        
+        Sender:netSend("authentication.verify", table(
+            "signature" = "signature":encrypt(LIB_NET["keys", array])
+        ))
+        
+        netStateCallback("connecting", Sender, table())
+        netStateCallback("authentication.pending", Sender, table())
+        
+        return 0
+    })
+    
+    netReceive("authentication.verify", function(_:string, Sender:entity, Payload:table) {
+        local Keys = LIB_NET["keys", array]
+        
+        local AuthenticationFailed = function(Reason:string) {
+            Sender:netSend("authentication.failed", table(
+                "reason" = Reason,
+                "signature" = "signature":encrypt(Keys)
+            ))
+            
+            netStateCallback("authentication.failed", Sender, table())
+        }
+        
+        local SteamId = Payload["steamid", string]:decrypt(Keys)
+        if(Sender:owner():steamID() != SteamId) {
+            AuthenticationFailed("SteamID verification failed")
+            return
+        }
+        
+        #TODO: uncomment this
+        #[
+        foreach(_:number, Client:entity = LIB_NET["clients", table]) {
+            if(Client:owner():steamID() == SteamId) {
+                AuthenticationFailed("Already connected to this server using another client")
+                return
+            }
+        }
+        ]#
+        
+        LIB_NET["clients", table]:pushEntity(Sender)
+        
+        Sender:netSend("authentication.success", table(
+            "signature" = "signature":encrypt(Keys)
+        ))
+        
+        netStateCallback("authentication.success", Sender, table())
+        netStateCallback("connected", Sender, table())
+        
+        return 0
+    })
+    
+    Callback()
+}
+
+function void netServerStop() {
+    if(LIB_NET["type", string] != "server") {
+        return
+    }
+    
+    dsSetScope(0)
+    dsLeaveGroup(LIB_NET["network", string])
+    LIB_NET["network", string] = ""
+    LIB_NET["type", string] = "none"
+    LIB_NET["callbacks", table] = table(
+        "states" = table(),
+        "messages" = table()
+    )
+    LIB_NET["clients", table] = table()
+    LIB_NET["keys", array] = array()
+}
+
+function netClientStart(Network:string, Scope:number, Callback:function) {
+    if(LIB_NET["type", string] != "none") {
+        return
+    }
+    
+    dsSetScope(Scope)
+    dsJoinGroup(Network)
+    
+    LIB_NET["type", string] = "client"
+    LIB_NET["network", string] = Network
+    
+    netReceive("authentication.verify", function(_:string, Sender:entity, Payload:table) {
+        if(LIB_NET["server", entity]:isValid()) {
+            return 1
+        }
+        
+        local Keys = LIB_NET["keys", array]
+        
+        #a server responded with message, if we can decrypt it... the password on the server is same as ours
+        local Signature = Payload["signature", string]
+        if(Signature:decrypt(Keys) != "signature") {
+            return 1
+        }
+        
+        Sender:netSend("authentication.verify", table(
+            "steamid" = owner():steamID():encrypt(Keys)
+        ))
+        
+        netStateCallback("authentication.pending", Sender, table())
+        
+        return 0
+    })
+    
+    netReceive("authentication.success", function(_:string, Sender:entity, Payload:table) {
+        if(LIB_NET["server", entity]:isValid()) {
+            return 1
+        }
+        
+        local Keys = LIB_NET["keys", array]
+        
+        #a server responded with message, if we can decrypt it... the password on the server is same as ours
+        local Signature = Payload["signature", string]
+        if(Signature:decrypt(Keys) != "signature") {
+            return 1
+        }
+        
+        LIB_NET["server", entity] = Sender
+        
+        netStateCallback("authentication.success", Sender, table())
+        netStateCallback("connected", Sender, table())
+        
+        return 0
+    })
+    
+    netReceive("authentication.failed", function(_:string, Sender:entity, Payload:table) {
+        if(LIB_NET["server", entity]:isValid()) {
+            return 1
+        }
+        
+        local Keys = LIB_NET["keys", array]
+        
+        #a server responded with message, if we can decrypt it... the password on the server is same as ours
+        local Signature = Payload["signature", string]
+        if(Signature:decrypt(Keys) != "signature") {
+            return 1
+        }
+        
+        netStateCallback("disconnected", Sender, table("reason" = Payload["reason", string]))
+        
+        return 0
+    })
+    
+    Callback()
+}
+
+function void netClientStop() {
+    if(LIB_NET["type", string] != "client") {
+        return
+    }
+    
+    dsSetScope(0)
+    dsLeaveGroup(LIB_NET["network", string])
+    LIB_NET["network", string] = ""
+    LIB_NET["type", string] = "none"
+    LIB_NET["callbacks", table] = table(
+        "states" = table(),
+        "messages" = table()
+    )
+    LIB_NET["clients", table] = table()
+    LIB_NET["keys", array] = array()
+}
+
+function void netJoinServer(Address:string, Password:string) {
+    if(LIB_NET["type", string] != "client") {
+        return
+    }
+    
+    if(LIB_NET["keys", array]:count() > 0) {
+        return
+    }
+    
+    if(LIB_NET["server", entity]:isValid()) {
+        return
+    }
+    
+    local Keys = Password:encryptKeys()
+    LIB_NET["keys", array] = Keys
+    
+    netBroadcast("authentication.login", table(
+        "address" = Address:encrypt(Keys),
+        "password" = Password:encrypt(Keys)
+    ))
+    
+    netStateCallback("connecting", noentity(), table())
+    timer("library.net.authentication.timeout", 0)
+}
+
+if(clk("library.net.authentication.timeout")) {
+    if(!LIB_NET["server", entity]:isValid()) {
+        LIB_NET["keys", array] = array()
+        netStateCallback("disconnected", noentity(), table( "reason" = "server not found" ))
+    }
+}
+
+if(dsClk()) {
+    if(dsClkName():startsWith("library.net.")) {
+        local Type = dsClkName():right(dsClkName():length() - "library.net.":length())
+        if(Type == "authentication.login" | Type == "authentication.verify" | Type == "authentication.success") {
+            netReceiveCallback(Type, dsGetSender(), dsGetTable())
+        } else {
+            if(LIB_NET["type", string] == "server") {
+                foreach(_:number, Client:entity = LIB_NET["clients", table]) {
+                    if(Client == dsGetSender()) {
+                        netReceiveCallback(Type, dsGetSender(), dsGetTable())
+                        break
+                    }
+                }
+            } elseif(LIB_NET["type", string] == "client") {
+                if(LIB_NET["server", entity] == dsGetSender()) {
+                    netReceiveCallback(Type, dsGetSender(), dsGetTable())
+                }
+            }
+        }
+    }
+}

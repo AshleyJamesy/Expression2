@@ -1,0 +1,17 @@
+@name library/tau
+
+function entity:ulxSendPrivateMessage(String:string) {
+    if(!This:isValid()) {
+        return
+    }
+    
+    if(!This:isPlayer()) {
+        return
+    }
+    
+    if(This == owner()) {
+        print(String)
+    } else {
+        This:tauSendChatMsg(String)
+    }
+}

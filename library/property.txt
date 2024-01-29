@@ -1,68 +1,233 @@
-if(first() || dupefinished()) {
-    function number table:setProperty(TypeIds:table, Name:string, Default:number, Remove:number) {
-        if(!Remove) {
-            if(!This:exists(Name) || TypeIds[Name, string] != "n") {
-                This[Name, number] = Default
-            }
-            
-            return This[Name, number]
+@name library/property
+
+function angle table:setProperty(TypeIds:table, Name:string, Default:angle, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "a") {
+            This[Name, angle] = Default
         }
         
+        return This[Name, angle]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function array table:setProperty(TypeIds:table, Name:string, Default:array, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "r") {
+            This[Name, array] = Default:clone()
+        }
+        
+        return This[Name, array]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function bone table:setProperty(TypeIds:table, Name:string, Default:bone, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "b") {
+            This[Name, bone] = Default
+        }
+        
+        return This[Name, bone]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function complex table:setProperty(TypeIds:table, Name:string, Default:complex, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "c") {
+            This[Name, complex] = Default
+        }
+        
+        return This[Name, complex]
+    }
+    This:remove(Name)
+    return Default
+}
+
+#ifdef damage()
+    function damage table:setProperty(TypeIds:table, Name:string, Default:damage, Remove:number) {
+        if(!Remove) {
+            if(!This:exists(Name) || TypeIds[Name, string] != "c") {
+                This[Name, damage] = Default
+            }
+            
+            return This[Name, damage]
+        }
         This:remove(Name)
         return Default
     }
-    
-    function string table:setProperty(TypeIds:table, Name:string, Default:string, Remove:number) {
+#else
+#ifdef wirelink:damage(string)
+    function damage table:setProperty(TypeIds:table, Name:string, Default:damage, Remove:number) {
         if(!Remove) {
-            if(!This:exists(Name) || TypeIds[Name, string] != "s") {
-                This[Name, string] = Default
+            if(!This:exists(Name) || TypeIds[Name, string] != "xdm") {
+                This[Name, damage] = Default
             }
             
-            return This[Name, string]
+            return This[Name, damage]
         }
-        
         This:remove(Name)
         return Default
     }
-    
-    function vector2 table:setProperty(TypeIds:table, Name:string, Default:vector2, Remove:number) {
-        if(!Remove) {
-            if(!This:exists(Name) || TypeIds[Name, string] != "xv2") {
-                This[Name, vector2] = Default
-            }
-            
-            return This[Name, vector2]
+#endif
+#endif
+
+function entity table:setProperty(TypeIds:table, Name:string, Default:entity, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "e") {
+            This[Name, entity] = Default
         }
         
-        This:remove(Name)
-        return Default
+        return This[Name, entity]
     }
-    
-    function vector4 table:setProperty(TypeIds:table, Name:string, Default:vector4, Remove:number) {
-        if(!Remove) {
-            if(!This:exists(Name) || TypeIds[Name, string] != "xv4") {
-                This[Name, vector4] = Default
-            }
-            
-            return This[Name, vector4]
+    This:remove(Name)
+    return Default
+}
+
+function matrix table:setProperty(TypeIds:table, Name:string, Default:matrix, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "m") {
+            This[Name, matrix] = Default
         }
         
-        This:remove(Name)
-        return Default
+        return This[Name, matrix]
     }
-    
-    function table table:setProperty(TypeIds:table, Name:string, Default:table, Remove:number) {
-        if(!Remove) {
-            if(!This:exists(Name) || TypeIds[Name, string] != "t") {
-                This[Name, table] = Default
-            } else {
-                This[Name, table] = This[Name, table]:intersect(Default)
-            }
-            
-            return This[Name, table]
+    This:remove(Name)
+    return Default
+}
+
+function matrix2 table:setProperty(TypeIds:table, Name:string, Default:matrix2, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "xm2") {
+            This[Name, matrix2] = Default
         }
         
-        This:remove(Name)
-        return Default
+        return This[Name, matrix2]
     }
+    This:remove(Name)
+    return Default
+}
+
+function matrix4 table:setProperty(TypeIds:table, Name:string, Default:matrix4, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "xm4") {
+            This[Name, matrix4] = Default
+        }
+        
+        return This[Name, matrix4]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function number table:setProperty(TypeIds:table, Name:string, Default:number, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "n") {
+            This[Name, number] = Default
+        }
+        
+        return This[Name, number]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function quaternion table:setProperty(TypeIds:table, Name:string, Default:quaternion, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "q") {
+            This[Name, quaternion] = Default
+        }
+        
+        return This[Name, quaternion]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function ranger table:setProperty(TypeIds:table, Name:string, Default:ranger, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "xrd") {
+            This[Name, ranger] = Default
+        }
+        
+        return This[Name, ranger]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function string table:setProperty(TypeIds:table, Name:string, Default:string, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "s") {
+            This[Name, string] = Default
+        }
+        
+        return This[Name, string]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function table table:setProperty(TypeIds:table, Name:string, Default:table, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "t") {
+            This[Name, table] = Default:clone()
+        }
+        
+        return This[Name, table]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function vector table:setProperty(TypeIds:table, Name:string, Default:vector, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "v") {
+            This[Name, vector] = Default
+        }
+        
+        return This[Name, vector]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function vector2 table:setProperty(TypeIds:table, Name:string, Default:vector2, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "xv2") {
+            This[Name, vector2] = Default
+        }
+        
+        return This[Name, vector2]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function vector4 table:setProperty(TypeIds:table, Name:string, Default:vector4, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "xv4") {
+            This[Name, vector4] = Default
+        }
+        
+        return This[Name, vector4]
+    }
+    This:remove(Name)
+    return Default
+}
+
+function wirelink table:setProperty(TypeIds:table, Name:string, Default:wirelink, Remove:number) {
+    if(!Remove) {
+        if(!This:exists(Name) || TypeIds[Name, string] != "xwl") {
+            This[Name, wirelink] = Default
+        }
+        
+        return This[Name, wirelink]
+    }
+    This:remove(Name)
+    return Default
 }

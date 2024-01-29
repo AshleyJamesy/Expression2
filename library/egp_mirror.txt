@@ -1,0 +1,117 @@
+@name Mirror
+@inputs EGP:wirelink
+@persist QUEUE:table
+
+if(first() | dupefinished()) {
+    QUEUE = table()
+}
+
+if(dsClk() & dsClkName() == "library.egp.mirror") {
+    QUEUE = QUEUE:add(dsGetTable()), timer("library.egp.clk", 0)
+}
+
+if(clk("library.egp.clk")) {
+    while(QUEUE:count() > 0 && perf(95)) {
+        local Event = QUEUE:removeTable(1)
+        
+        local Type = Event["type", string]
+        switch(Type) {
+            case "clear",
+                EGP:egpClear()
+                EGP:egpDrawTopLeft(1)
+            break
+            case "create",
+                local Id = Event["id", number]
+                local ObjectType = Event["objecttype", string]
+                local Position = Event["position", vector2]
+                local Size = Event["size", vector2]
+                local Outline = Event["outline", number]
+                
+                switch(ObjectType) {
+                    case "box",
+                        EGP:egpBox(Id, Position, Size)
+                    break
+                    case "boxoutline",
+                        EGP:egpBoxOutline(Id, Position, Size)
+                        EGP:egpSize(Id, Outline)
+                    break
+                    case "roundedbox",
+                        EGP:egpRoundedBox(Id, Position, Size)
+                    break
+                    case "roundedboxoutline",
+                        EGP:egpRoundedBoxOutline(Id, Position, Size)
+                        EGP:egpSize(Id, Outline)
+                    break
+                    case "circle",
+                        EGP:egpCircle(Id, Position, Size)
+                    break
+                    case "circleoutline",
+                        EGP:egpCircleOutline(Id, Position, Size)
+                        EGP:egpSize(Id, Outline)
+                    break
+                    case "text",
+                        EGP:egpTextLayout(Id, "", Position, Size)
+                    break
+                }
+            break
+            case "parent",
+                local Id = Event["id", number]
+                local ParentId = Event["parent", number]
+                EGP:egpParent(Id, ParentId)
+            break
+            case "position",
+                local Id = Event["id", number]
+                local Position = Event["position", vector2]
+                EGP:egpPos(Id, Position)
+            break
+            case "size",
+                local Id = Event["id", number]
+                local Size = Event["size", vector2]
+                EGP:egpSize(Id, Size)
+            break
+            case "color",
+                local Id = Event["id", number]
+                local Color = Event["color", vector4]
+                EGP:egpColor(Id, Color)
+            break
+            case "remove",
+                local Id = Event["id", number]
+                EGP:egpRemove(Id)
+            break
+            case "material",
+                local Id = Event["id", number]
+                local Material = Event["material", string]
+                EGP:egpMaterial(Id, "")
+                EGP:egpMaterial(Id, Material)
+            break
+            case "text",
+                local Id = Event["id", number]
+                local Text = Event["text", string]
+                EGP:egpSetText(Id, Text)
+            break
+            case "font",
+                local Id = Event["id", number]
+                local Font = Event["font", string]
+                
+                if(Event:exists("size")) {
+                    local Size = Event["size", number]
+                    EGP:egpFont(Id, Font, Size)
+                } else {
+                    EGP:egpFont(Id, Font)
+                }
+            break
+            case "align",
+                local Id = Event["id", number]
+                local X = Event["x", number]
+                local Y = Event["y", number]
+                EGP:egpAlign(Id, X, Y)
+            break
+            default,
+            break
+        }
+    }
+    
+    if(QUEUE:count() > 0) {
+        timer("library.egp.clk", 0)
+    }
+}

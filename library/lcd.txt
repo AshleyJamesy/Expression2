@@ -1,0 +1,93 @@
+function void wirelink:lcdScreenWidth(Width:number) {
+    This[1009] = Width
+    This[1023] = 1
+}
+
+function void wirelink:lcdScreenHeight(Height:number) {
+    This[1010] = Height
+    This[1023] = 1
+}
+
+function number wirelink:lcdScreenWidth() {
+    return This[1009]
+}
+
+function number wirelink:lcdScreenHeight() {
+    return This[1010]
+}
+
+function void wirelink:lcdBackgroundColor(Color:vector) {
+    This[1003] = Color:x()
+    This[1004] = Color:y()
+    This[1005] = Color:z()
+    This[1023] = 1
+}
+
+function vector wirelink:lcdBackgroundColor() {
+    return vec(This[1003], This[1004], This[1005])
+}
+
+function void wirelink:lcdForegroundColor(Color:vector) {
+    This[1006] = Color:x()
+    This[1007] = Color:y()
+    This[1008] = Color:z()
+    This[1023] = 1
+}
+
+function vector wirelink:lcdForegroundColor() {
+    return vec(This[1006], This[1007], This[1008])
+}
+
+function void wirelink:lcdCursorEnabled(Enabled:number) {
+    This[1022] = Enabled
+    This[1023] = 1
+}
+
+function number wirelink:lcdCursorEnabled() {
+    return This[1022]
+}
+
+
+function void wirelink:lcdCursorAddress(Address:number) {
+    This[1021] = Address
+    This[1023] = 1
+}
+
+function number wirelink:lcdCursorAddress() {
+    return This[1021]
+}
+
+function void wirelink:lcdCursorBlinkrate(Rate:number) {
+    This[1019] = Rate
+    This[1023] = 1
+}
+
+function number wirelink:lcdCursorBlinkrate() {
+    return This[1019]
+}
+
+function void wirelink:lcdCursorSize(Size:number) {
+    This[1020] = Size
+    This[1023] = 1
+}
+
+function number wirelink:lcdCursorSize() {
+    return This[1020]
+}
+
+function void wirelink:lcdCursorPos(X:number, Y:number) {
+    This[1021] = Y * This[1009] + X
+    This[1023] = 1
+}
+
+function number wirelink:lcdCursorPos() {
+    return This[1021]
+}
+
+function void wirelink:lcdClearScreen() {
+    for(Y = 0, This:lcdScreenHeight() - 1) {
+        for(X = 0, This:lcdScreenWidth() - 1) {
+            This[Y * This[1009] + X] = 0
+        }
+    }
+}

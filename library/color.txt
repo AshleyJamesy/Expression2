@@ -1,0 +1,29 @@
+@name library/color
+
+function string rgb2hex(Color:vector) {
+    local R = min(max(Color:x(), 0), 255)
+    local G = min(max(Color:y(), 0), 255)
+    local B = min(max(Color:z(), 0), 255)
+    return format("#%02x%02x%02x", R, G, B):upper()
+}
+
+function vector4 hex2rgb(Hex:string) {
+    Hex = Hex:left(1) == "#" ? Hex:right(Hex:length() - 1) : Hex
+    local R = ("0x" + Hex:sub(1,2)):toNumber()
+    local G = ("0x" + Hex:sub(3,4)):toNumber()
+    local B = ("0x" + Hex:sub(5,6)):toNumber()
+    local A = Hex:length() > 6 ? ("0x" + Hex:sub(7,8)):toNumber() : 255
+    return vec4(R,G,B,A)
+}
+
+function vector rgb(Time:number, Speed:number) {
+    return hsv2rgb(sin(Time * Speed) * 255, 1, 1)
+}
+
+function vector rgb(Speed:number) {
+    return rgb(curtime(), Speed)
+}
+
+function vector rgb() {
+    return rgb(curtime(), 1)
+}

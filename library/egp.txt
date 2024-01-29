@@ -1,82 +1,1758 @@
+@name library/egp
 @inputs EGP_SCREEN:wirelink EGP_USER:entity
+@persist LIB_EGP:table
 
-if(first() || dupefinished()) {
-    function wirelink egpScreen() {
-        return EGP_SCREEN
+if(first() | dupefinished()) {
+    LIB_EGP = table(
+        "index" = 1,
+        "queue" = table(),
+        "data" = table(),
+        "noelement" = table(),
+        "input" = 1,
+        "mirror" = noentity(),
+        "mirror_queue" = table()
+    )
+}
+
+# =============================== FUNCTIONS: INPUTS =============================== 
+    
+function wirelink egpWirelink() {
+    return EGP_SCREEN
+}
+
+function number egpWirelinkChanged() {
+    return EGP_SCREEN & ~EGP_SCREEN | ((first() | dupefinished()) && EGP_SCREEN:entity():isValid())
+}
+
+function entity egpScreen() {
+    return EGP_SCREEN:entity()
+}
+
+function entity egpUser() {
+    return EGP_USER
+}
+
+function number egpUserChanged() {
+    return EGP_USER & ~EGP_USER
+}
+
+function vector2 entity:egpToScreen(Dir:vector, Fov:number) {
+    local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
+    local FDP = CamAngle:forward():dot(Dir)
+    
+    if(FDP <= 0) {
+        return vec2(-1, -1)
     }
     
-    function void egpWire() {
-        findIncludePlayerProps(owner())
-        findByClass("gmod_wire_egp*")
-        findSortByDistance(entity():pos())
+    local VProj = 4 * egpScrH(This) / (6 * tan(0.5 * Fov)) / FDP * Dir
+    
+    return vec2(
+        0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
+        0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
+    )
+}
+
+function vector2 entity:egpWorldToScreen(WorldPos:vector, Fov:number) {
+    local Dir = WorldPos - This:shootPos()
+    local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
+    local FDP = CamAngle:forward():dot(Dir)
+    
+    if(FDP <= 0) {
+        return vec2(-1, -1)
+    }
+    
+    local VProj = 4 * egpScrH(This) / (6 * tan(0.5 * Fov)) / FDP * Dir
+    
+    return vec2(
+        0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
+        0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
+    )
+}
+
+function vector2 wirelink:egpCursorEmitterPos(Player:entity, Scale:number, Position:vector) {
+    local Emitter = This:entity()
+    
+    local RayOrigin = Player:shootPos()
+    local RayDirection = (Player:aimPos() - Player:shootPos()):normalized()
+    
+    local PlaneUp = -Emitter:right()
+    local PlaneRight = Emitter:forward()
+    local PlaneOrigin = Emitter:pos()
+    PlaneOrigin += Emitter:forward() * Position:x()
+    PlaneOrigin += Emitter:right() * Position:y()
+    PlaneOrigin += Emitter:up() * Position:z()
+    
+    if(Player:pos():distance(PlaneOrigin) > 150) {
+        return vec2(-1,-1)
+    }
+    
+    #ray intersect plane
+    local DotProduct = PlaneUp:dot(RayDirection)
+    if(abs(DotProduct) < 0.0000001) {
+        return vec2(-1,-1)
+    }
+    local T = (PlaneOrigin - RayOrigin):dot(PlaneUp) / DotProduct
+    if(T < 0) {
+        return vec2(-1,-1)
+    }
+    local Intersect = RayOrigin + T * RayDirection
+    local PositionOnPlane = Intersect - PlaneOrigin
+    local Position2D = vec2(PositionOnPlane:dot(PlaneRight), PositionOnPlane:dot(PlaneUp:cross(PlaneRight)))
+    
+    #convert to egp coords
+    local ScaleSize = 64 * Scale
+    local Size = This:egpSize()
+    local X = round(((Position2D:x() + ScaleSize) / (ScaleSize * 2)) * Size:x())
+    local Y = round(((Position2D:y() + ScaleSize) / (ScaleSize * 2)) * Size:y())
+    
+    if(X < 0 | Y < 0 | X > Size:x() | Y > Size:y()) {
+        return vec2(-1,-1)
+    }
+    
+    return vec2(X, Y)
+}
+
+function vector2 wirelink:egpCursorEmitterPos(Player:entity) {
+    return This:egpCursorEmitterPos(Player, 1.0, vec(0,0,71)) #defaults
+}
+
+function void wirelink:egpFixMaterials() {
+    foreach(_:number, Id:number = This:egpObjectIndexes()) {
+        local Material = This:egpMaterial(Id)
+        if(Material != "") {
+            This:egpMaterial(Id, "")
+            This:egpMaterial(Id, Material)
+        }
+    }
+}
+
+# =============================== FUNCTIONS: MEMORY =============================== 
+
+function number egpNew() {
+    local Data = LIB_EGP["data", table]
+    local Free = Data["free", array]
+    local Used = Data["used", array]
+    if(Free:count() == 0) {
+        local Total = Free:count() + Used:count() + 1
+        if(Total < egpMaxObjects()) {
+            return Used:pushNumber(Total)
+        }
+    } else {
+        return Used:pushNumber(Free:removeNumber(1))
+    }
+    return 0
+}
+
+function void egpFree(Id:number) {
+    local Data = LIB_EGP["data", table]
+    local Free = Data["free", array]
+    local Used = Data["used", array]
+    local Keys = invert(Used)
+    if(Keys:exists(Id:toString())) {
+        local Id = Free:pushNumber(Used:removeNumber(Keys[Id:toString(), number]))
+        EGP_SCREEN:egpRemove(Id)
+        LIB_EGP["mirror_queue" , table]:pushTable(table(
+            "type" = "remove",
+            "id" = Id
+        ))
+    }
+}
+
+function table egpNoElement() {
+    return LIB_EGP["noelement", table]
+}
+
+# =============================== FUNCTIONS: HELPERS =============================== 
+
+function number egpPixels(Value:number, _:number) {
+    return Value
+}
+
+function number egpPixels(Value:string, Max:number) {
+    local Absolute = Value:match("^(-*%d+)$")
+    if(Absolute[1, string] == "") {
+        Absolute = Value:match("^(-*%d+)px$")
+    }
+    
+    if(Absolute[1, string] != "") {
+        return Absolute[1, string]:toNumber()
+    }
+    
+    local Percent = Value:match("^(-*%d+)%%$")
+    if(Percent[1, string] == "") {
+        Percent = Value:match("^(-*%d+%.%d+)%%$")
+    }
+    
+    if(Percent[1, string] != "") {
+        return ceil((Percent[1, string]:toNumber() / 100) * Max)
+    }
+    
+    return 0
+}
+
+# =============================== FUNCTIONS: CALLBACKS =============================== 
+
+function void egpCallback(Callback:function, Data:table, Index:number, Clk:number) {
+    timer("library.egp.clk", 0)
+    if(Clk) { LIB_EGP["queue", table]:insertTable(Index, table("type" = "clk")) }
+    LIB_EGP["queue", table]:insertTable(Index, table("type" = "callback", "callback" = Callback, "data" = Data))
+    if(Clk) { LIB_EGP["queue", table]:insertTable(Index, table("type" = "clk")) }
+}
+
+function void egpCallback(Callback:function, Data:table, Index:number) {
+    egpCallback(Callback, Data, Index, 1)
+}
+
+function void egpCallback(Callback:function, Data:table) {
+    egpCallback(Callback, Data, 1, 1)
+}
+
+function void egpCallback(Callback:function) {
+    egpCallback(Callback, table())
+}
+
+# =============================== FUNCTIONS: GENERAL =============================== 
+
+function void egpClear(Width:number, Height:number, Callback:function) {
+    EGP_SCREEN:egpClear()
+    EGP_SCREEN:egpDrawTopLeft(1)
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "clear"
+    ))
+    
+    local ElementDocument = table(
+        "id" = 0,
+        "index" = 0,
+        "name" = "document",
+        "path" = "",
+        "anchor" = vec2(0,0),
+        "position" = vec2(0,0),
+        "size" = vec2(Width, Height),
+        "object" = noegpobject(),
+        "children" = table(
+            "name" = table(),
+            "index" = table()
+        ),
+        "properties" = table(
+            "events" = table()
+        )
+    )
+    
+    LIB_EGP["data", table] = table(
+        "free" = array(),
+        "used" = array(),
+        "animations" = table(),
+        "path" = table(
+            "document" = ElementDocument
+        ),
+        "elements" = table(),
+        "font" = "",
+        "user" = noentity(),
+        "hot" = LIB_EGP["noelement", table]
+    )
+    
+    if(LIB_EGP["input", number] == 1) {
+        timer("library.egp.mouseover", 0)
+    }
+    egpCallback(Callback, table("target" = ElementDocument), 1, 1)
+}
+
+function void egpMirrorEnable(Mirror:entity) {
+    LIB_EGP["mirror", entity] = Mirror
+}
+
+function void egpMirrorDisable() {
+    LIB_EGP["mirror", entity] = noentity()
+}
+
+function egpInputDisable() {
+    stoptimer("library.egp.mouseover")
+    LIB_EGP["input", number] = 0
+}
+
+function egpInputEnable() {
+    timer("library.egp.mouseover", 0)
+    LIB_EGP["input", number] = 1
+}
+
+function egpSetUser(Player:entity) {
+    if(!Player:isValid() | !Player:isPlayer()) {
+        LIB_EGP["data", table]["user", entity] = noentity()
+        return
+    }
+    if(LIB_EGP["input", number] == 1) {
+        timer("library.egp.mouseover", 0)
+    }
+    LIB_EGP["data", table]["user", entity] = Player
+}
+
+function table egpDocument() {
+    return LIB_EGP["data", table]["path", table]["document", table]
+}
+
+function table egpPaths() {
+    return LIB_EGP["data", table]["path", table]
+}
+
+function number egpExists(Path:string) {
+    return egpPaths():exists(Path)
+}
+
+function table egpGet(Path:string) {
+    local Paths = egpPaths()
+    if(!Paths:exists(Path)) {
+        error("element('" + Path + "') not found")
+    }
+    return Paths[Path, table]
+}
+
+function number egpHasElement(Path:string) {
+    return egpPaths():exists(Path)
+}
+
+# =============================== OBJECT PROPERTIES: GENERAL =============================== 
+function number table:egpId() {
+    return This["id", number]
+}
+
+function string table:egpType() {
+    return This["properties", table]["type", string]
+}
+
+function number table:egpIndex() {
+    return This["index", number]
+}
+
+#NAME:
+function string table:egpPath() {
+    return This["path", string]
+}
+
+function string table:egpName() {
+    return This["name", string]
+}
+
+function number table:egpValid() {
+    return This:egpId() != 0
+}
+
+function table table:egpParent() {
+    if(!This:exists("parent")) {
+        error("element has no parent")
+    }
+    return This["parent", table]
+}
+
+function number table:egpHasParent() {
+    return This:exists("parent")
+}
+
+function table table:egpChildren() {
+    return This["children", table]["index", table]
+}
+
+function table table:egpChild(I:number) {
+    local Children = This:egpChildren()
+    if(!Children:exists(I)) {
+        error("child(" + I + ") not found in element")
+    }
+    return Children[I, table]
+}
+
+function table table:egpChild(Name:string) {
+    local Children = This["children", table]["name", table]
+    if(!Children:exists(Name)) {
+        error("child(" + Name + ") not found in element")
+    }
+    return Children[Name, table]
+}
+
+function number table:egpHasChild(Name:string) {
+    return This["children", table]["name", table]:exists(Name)
+}
+
+function number table:egpHasChild(Index:number) {
+    return This["children", table]["index", table]:exists(Index)
+}
+
+function table table:egpChildFirst() {
+    try {
+        return This:egpChild(1)
+    } catch(_:string) {
+        error("child(1) not found in element")
+    }
+    return table()
+}
+
+function table table:egpChildLast() {
+    local Children = This:egpChildren()
+    try {
+        return This:egpChild(Children:count())
+    } catch(_:string) {
+        error("child(n) not found in element")
+    }
+    return table()
+}
+
+# =============================== OBJECT PROPERTIES: SIZE =============================== 
+function vector2 table:egpSize() {
+    return This["size", vector2]
+}
+
+function table:egpSize(Size:vector2) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    Properties["size", vector2] = Size
+    This["size", vector2] = Size
+    EGP_SCREEN:egpSize(Id, Size)
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "size",
+        "id" = Id,
+        "size" = Size
+    ))
+}
+
+function table:egpSize(Size:table) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    
+    local ParentSize = vec2()
+    ParentSize = egpDocument()["size", vector2]
+    if(This:exists("parent")) {
+        ParentSize = This:egpParent():egpSize()
+    }
+    
+    local SizeTypesIds = Size:typeids()
+    local W = SizeTypesIds["width", string] == "n" ? egpPixels(Size["width", number], ParentSize:x()) : egpPixels(Size["width", string], ParentSize:x())
+    local H = SizeTypesIds["height", string] == "n" ? egpPixels(Size["height", number], ParentSize:y()) : egpPixels(Size["height", string], ParentSize:y())
+    
+    Properties["size", table] = Size
+    This["size", vector2] = vec2(W, H)
+    EGP_SCREEN:egpSize(Id, vec2(W, H))
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "size",
+        "id" = Id,
+        "size" = vec2(W, H)
+    ))
+    #TODO: re-render children when?
+}
+
+# =============================== OBJECT PROPERTIES: POSITION =============================== 
+function vector2 table:egpPos() {
+    return This["position", vector2]
+}
+
+function vector2 table:egpGlobalPos() {
+    return vec2(EGP_SCREEN:egpGlobalPos(This:egpId()))
+}
+
+function void table:egpPos(Position:vector2) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    
+    #POSITION:
+    local X = Position:x()
+    local Y = Position:y()
+    
+    #ANCHOR:
+    local AX = 0
+    local AY = 0
+    
+    if(Properties:exists("anchor")) {
+        local TypeIds = Properties:typeids()
+        if(TypeIds["anchor", string] == "xv2") {
+            local Anchor = Properties["anchor", vector2]
+            AX = Anchor:x()
+            AY = Anchor:y()
+        } elseif(TypeIds["anchor", string] == "t") {
+            local Size = This:egpSize()
+            local Anchor = Properties["anchor", table]
+            local AnchorTypesIds = Anchor:typeids()
+            AX = AnchorTypesIds["x", string] == "n" ? egpPixels(Anchor["x", number], Size:x()) : egpPixels(Anchor["x", string], Size:x())
+            AY = AnchorTypesIds["y", string] == "n" ? egpPixels(Anchor["y", number], Size:y()) : egpPixels(Anchor["y", string], Size:y())
+        }
+    } else {
+        Properties["anchor", vector2] = vec2(0,0)
+    }
+    
+    Properties["position", vector2] = Position
+    This["position", vector2] = vec2(X, Y)
+    This["anchor", vector2] = vec2(AX, AY)
+    EGP_SCREEN:egpPos(Id, vec2(X, Y) - vec2(AX, AY))
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "position",
+        "id" = Id,
+        "position" = vec2(X, Y) - vec2(AX, AY)
+    ))
+}
+
+function void table:egpPos(Position:table) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    
+    #POSITION:
+    local ParentSize = vec2()
+    ParentSize = egpDocument()["size", vector2]
+    if(This:exists("parent")) {
+        ParentSize = This:egpParent():egpSize()
+    }
+    
+    local PositionTypesIds = Position:typeids()
+    local X = PositionTypesIds["x", string] == "n" ? egpPixels(Position["x", number], ParentSize:x()) : egpPixels(Position["x", string], ParentSize:x())
+    local Y = PositionTypesIds["y", string] == "n" ? egpPixels(Position["y", number], ParentSize:y()) : egpPixels(Position["y", string], ParentSize:y())
+    
+    #ANCHOR:
+    local AX = 0
+    local AY = 0
+    if(Properties:exists("anchor")) {
+        local TypeIds = Properties:typeids()
+        if(TypeIds["anchor", string] == "xv2") {
+            local Anchor = Properties["anchor", vector2]
+            AX = Anchor:x()
+            AY = Anchor:y()
+        } elseif(TypeIds["anchor", string] == "t") {
+            local Size = This:egpSize()
+            local Anchor = Properties["anchor", table]
+            local AnchorTypesIds = Anchor:typeids()
+            AX = AnchorTypesIds["x", string] == "n" ? egpPixels(Anchor["x", number], Size:x()) : egpPixels(Anchor["x", string], Size:x())
+            AY = AnchorTypesIds["y", string] == "n" ? egpPixels(Anchor["y", number], Size:y()) : egpPixels(Anchor["y", string], Size:y())
+        }
+    } else {
+        Properties["anchor", vector2] = vec2(0,0)
+    }
+    
+    Properties["position", table] = Position
+    This["position", vector2] = vec2(X, Y)
+    This["anchor", vector2] = vec2(AX, AY)
+    EGP_SCREEN:egpPos(Id, vec2(X, Y) - vec2(AX, AY))
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "position",
+        "id" = Id,
+        "position" = vec2(X, Y) - vec2(AX, AY)
+    ))
+}
+
+# =============================== OBJECT PROPERTIES: ANCHOR =============================== 
+function vector2 table:egpAnchor() {
+    return This["anchor", vector2]
+}
+
+function void table:egpAnchor(Anchor:vector2) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    
+    local X = 0
+    local Y = 0
+    if(Properties:exists("position")) {
+        local TypeIds = Properties:typeids()
+        if(TypeIds["position", string] == "xv2") {
+            local Position = Properties["position", vector2]
+            X = Position:x()
+            Y = Position:y()
+        } elseif(TypeIds["position", string] == "t") {
+            local ParentSize = vec2()
+            ParentSize = egpDocument()["size", vector2]
+            if(This:exists("parent")) {
+                ParentSize = This:egpParent():egpSize()
+            }
+            
+            local Position = Properties["position", table]
+            local PositionTypesIds = Position:typeids()
+            X = PositionTypesIds["x", string] == "n" ? egpPixels(Position["x", number], ParentSize:x()) : egpPixels(Position["x", string], ParentSize:x())
+            Y = PositionTypesIds["y", string] == "n" ? egpPixels(Position["y", number], ParentSize:y()) : egpPixels(Position["y", string], ParentSize:y())
+        }
+    } else {
+        Properties["position", vector2] = vec2(0,0)
+    }
+    
+    local PropAnchor = Anchor
+    local AX = PropAnchor:x()
+    local AY = PropAnchor:y()
+    
+    Properties["anchor", vector2] = PropAnchor
+    This["position", vector2] = vec2(X, Y)
+    This["anchor", vector2] = vec2(AX, AY)
+    EGP_SCREEN:egpPos(Id, vec2(X, Y) - vec2(AX, AY))
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "position",
+        "id" = Id,
+        "position" = vec2(X, Y) - vec2(AX, AY)
+    ))
+}
+
+function void table:egpAnchor(Anchor:table) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    
+    #POSITION:
+    local X = 0
+    local Y = 0
+    if(Properties:exists("position")) {
+        local TypeIds = Properties:typeids()
+        if(TypeIds["position", string] == "xv2") {
+            local Position = Properties["position", vector2]
+            X = Position:x()
+            Y = Position:y()
+        } elseif(TypeIds["position", string] == "t") {
+            local ParentSize = vec2()
+            ParentSize = egpDocument()["size", vector2]
+            if(This:exists("parent")) {
+                ParentSize = This:egpParent():egpSize()
+            }
+            
+            local Position = Properties["position", table]
+            local PositionTypesIds = Position:typeids()
+            X = PositionTypesIds["x", string] == "n" ? egpPixels(Position["x", number], ParentSize:x()) : egpPixels(Position["x", string], ParentSize:x())
+            Y = PositionTypesIds["y", string] == "n" ? egpPixels(Position["y", number], ParentSize:y()) : egpPixels(Position["y", string], ParentSize:y())
+        }
+    } else {
+        Properties["position", vector2] = vec2(0,0)
+    }
+    
+    #ANCHOR:
+    local Size = This:egpSize()
+    local PropAnchor = Properties["anchor", table]
+    local AnchorTypesIds = PropAnchor:typeids()
+    local AX = AnchorTypesIds["x", string] == "n" ? egpPixels(PropAnchor["x", number], Size:x()) : egpPixels(PropAnchor["x", string], Size:x())
+    local AY = AnchorTypesIds["y", string] == "n" ? egpPixels(PropAnchor["y", number], Size:y()) : egpPixels(PropAnchor["y", string], Size:y())
+    
+    Properties["anchor", table] = Anchor
+    This["position", vector2] = vec2(X, Y)
+    This["anchor", vector2] = vec2(AX, AY)
+    EGP_SCREEN:egpPos(Id, vec2(X, Y) - vec2(AX, AY))
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "position",
+        "id" = Id,
+        "position" = vec2(X, Y) - vec2(AX, AY)
+    ))
+}
+
+# =============================== OBJECT PROPERTIES: COLOUR =============================== 
+function vector4 table:egpColor() {
+    return This["object", egpobject]:getColor4()
+}
+
+function void table:egpColor(Hex:string) {
+    if(Hex:left(1) == "#") {
+        Hex = Hex:right(Hex:length() - 1)
+    }
+    local R = ("0x" + Hex:sub(1,2)):toNumber()
+    local G = ("0x" + Hex:sub(3,4)):toNumber()
+    local B = ("0x" + Hex:sub(5,6)):toNumber()
+    local A = Hex:length() > 6 ? ("0x" + Hex:sub(7,8)):toNumber() : 255
+    local Color = vec4(R,G,B,A)
+    
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    Properties["color", vector4] = Color
+    EGP_SCREEN:egpColor(Id, Color)
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "color",
+        "id" = Id,
+        "color" = Color
+    ))
+}
+
+function void table:egpColor(Color:vector4) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    Properties["color", vector4] = Color
+    EGP_SCREEN:egpColor(Id, Color)
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "color",
+        "id" = Id,
+        "color" = Color
+    ))
+}
+
+function void table:egpColor(Color:vector) {
+    This:egpColor(vec4(Color,255))
+}
+
+# ================
+
+function void table:egpAngle(Angle:number) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    Properties["angle", number] = Angle
+    EGP_SCREEN:egpAngle(Id, Angle)
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "angle",
+        "id" = Id,
+        "angle" = Angle
+    ))
+}
+
+# =============================== OBJECT PROPERTIES: OUTLINE =============================== 
+function number table:egpOutline() {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    switch(EGP_SCREEN:egpObjectType(Id)) {
+        case "BoxOutline",
+        case "RoundedBoxOutline",
+        case "CircleOutline",
+            return Properties["outline", number] > 0 ? Properties["outline", number] : 1
+        default,
+            return 0
+    }
+    return 0
+}
+
+function void table:egpOutline(Outline:number) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    local Type = EGP_SCREEN:egpObjectType(Id):lower()
+    if(Type == "box" | Type == "boxoutline" | Type == "roundedbox" | Type == "roundedboxoutline" | Type == "circle" | Type == "circleoutline") {
+        Outline = abs(Outline)
+        Properties["outline", number] = Outline
+        if(Type == "box" && Outline > 0) {
+            EGP_SCREEN:egpBoxOutline(Id, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpSize(Id))
+            EGP_SCREEN:egpSize(Id, Outline)
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "create",
+                "id" = Id,
+                "objecttype" = "boxoutline",
+                "position" = EGP_SCREEN:egpPos(Id),
+                "size" = EGP_SCREEN:egpSize(Id),
+                "outline" = Outline
+            ))
+        } elseif(Type == "boxoutline" && Outline == 0) {
+            EGP_SCREEN:egpBox(Id, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpSize(Id))
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "create",
+                "id" = Id,
+                "objecttype" = "box",
+                "position" = EGP_SCREEN:egpPos(Id),
+                "size" = EGP_SCREEN:egpSize(Id)
+            ))
+        } elseif(Type == "roundedbox" && Outline > 0) {
+            EGP_SCREEN:egpRoundedBoxOutline(Id, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpSize(Id))
+            EGP_SCREEN:egpSize(Id, Outline)
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "create",
+                "id" = Id,
+                "objecttype" = "roundedboxoutline",
+                "position" = EGP_SCREEN:egpPos(Id),
+                "size" = EGP_SCREEN:egpSize(Id),
+                "outline" = Outline
+            ))
+        } elseif(Type == "roundedboxoutline" && Outline == 0) {
+            EGP_SCREEN:egpRoundedBox(Id, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpSize(Id))
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "create",
+                "id" = Id,
+                "objecttype" = "roundedbox",
+                "position" = EGP_SCREEN:egpPos(Id),
+                "size" = EGP_SCREEN:egpSize(Id)
+            ))
+        } elseif(Type == "circle" && Outline > 0) {
+            EGP_SCREEN:egpCircleOutline(Id, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpSize(Id))
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "create",
+                "id" = Id,
+                "objecttype" = "circleoutline",
+                "position" = EGP_SCREEN:egpPos(Id),
+                "size" = EGP_SCREEN:egpSize(Id),
+                "outline" = Outline
+            ))
+        } elseif(Type == "circleoutline" && Outline == 0) {
+            EGP_SCREEN:egpCircle(Id, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpSize(Id))
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "create",
+                "id" = Id,
+                "objecttype" = "circle",
+                "position" = EGP_SCREEN:egpPos(Id),
+                "size" = EGP_SCREEN:egpSize(Id)
+            ))
+        } elseif(Type == "boxoutline" || Type == "roundedboxoutline" || Type == "circleoutline" && Outline > 0) {
+            EGP_SCREEN:egpSize(Id, Outline)
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "outline",
+                "id" = Id,
+                "outline" = Outline
+            ))
+        }
+    } else {
+        Properties:remove("outline")
+    }
+}
+
+# =============================== OBJECT PROPERTIES: MATERIAL =============================== 
+function void table:egpMaterial(Material:string) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    Properties["material", string] = Material
+    EGP_SCREEN:egpMaterial(Id, "") #fixes client issue with materials
+    EGP_SCREEN:egpMaterial(Id, Material)
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "material",
+        "id" = Id,
+        "material" = Material
+    ))
+}
+
+function string table:egpMaterial() {
+    return EGP_SCREEN:egpMaterial(This:egpId())
+}
+
+# =============================== OBJECT PROPERTIES: TEXT =============================== 
+function void table:egpText(Text:string) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    local Type = EGP_SCREEN:egpObjectType(Id)
+    if(Type == "text" | Type == "textlayout") {
+        Properties["text", string] = Text
+        EGP_SCREEN:egpSetText(Id, Text == "" ? "\0" : Text)
+        LIB_EGP["mirror_queue" , table]:pushTable(table(
+            "type" = "text",
+            "id" = Id,
+            "text" = Text == "" ? "\0" : Text
+        ))
+    } else {
+        Properties:remove("text")
+        Properties:remove("font")
+        Properties:remove("align")
+    }
+}
+
+function string table:egpText() {
+    return This["properties", table]["text", string]
+}
+
+# =============================== OBJECT PROPERTIES: FONT =============================== 
+function void egpDefaultFont(Font:string) {
+    LIB_EGP["font", string] = Font
+    
+    local Data = LIB_EGP["data", table]
+    if(!Data:exists("elements")) {
+        return
+    }
+    
+    foreach(Id:number, Element:table = Data["elements", table]) {
+        if(EGP_SCREEN:egpObjectType(Id) == "text" | EGP_SCREEN:egpObjectType(Id) == "textlayout") {
+            local Properties = Element["properties", table]
+            if(!Properties:exists("font")) {
+                EGP_SCREEN:egpFont(Id, Font)
+            }elseif(Properties["font", table]["font", string] == "") {
+                EGP_SCREEN:egpFont(Id, Font)
+            }
+        }
+    }
+}
+
+function void table:egpFont(Font:string, Size:number) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    local Type = EGP_SCREEN:egpObjectType(Id)
+    if(Type == "text" || Type == "textlayout") {
+        Properties["font", table] = table(
+            "font" = Font,
+            "size" = Size
+        )
         
-        if(find()) {   
-            if(find():owner() == owner()) {
-                if(!egpScreen():entity()) {
-                    #ifdef entity:createWire(entity, string, string)
-                    
-                    local EGP = find()
-                    entity():createWire(EGP, "EGP_SCREEN", "wirelink")
-                    entity():createWire(EGP, "EGP_USER", "User")
-                    
-                    #endif
+        local DefaultFont = LIB_EGP["font", string]
+        EGP_SCREEN:egpFont(Id, Font == "" ? DefaultFont : Font, Size)
+        LIB_EGP["mirror_queue" , table]:pushTable(table(
+            "type" = "font",
+            "id" = Id,
+            "font" = Font,
+            "size" = Size
+        ))
+    } else {
+        Properties:remove("text")
+        Properties:remove("font")
+        Properties:remove("align")
+    }
+}
+
+function void table:egpFont(Font:string, Size:string) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    local Type = EGP_SCREEN:egpObjectType(Id)
+    if(Type == "text" || Type == "textlayout") {
+        Properties["font", table] = table(
+            "font" = Font,
+            "size" = Size
+        )
+        
+        local ParentSize = vec2()
+        ParentSize = egpDocument()["size", vector2]
+        if(This:egpHasParent()) {
+            ParentSize = This:egpParent():egpSize()
+        }
+        
+        local DefaultFont = LIB_EGP["font", string]
+        EGP_SCREEN:egpFont(Id, Font == "" ? DefaultFont : Font, egpPixels(Size, ParentSize:y()))
+        LIB_EGP["mirror_queue" , table]:pushTable(table(
+            "type" = "font",
+            "id" = Id,
+            "font" = Font,
+            "size" = Size
+        ))
+    } else {
+        Properties:remove("text")
+        Properties:remove("font")
+        Properties:remove("align")
+    }
+}
+
+# =============================== OBJECT PROPERTIES: ALIGN =============================== 
+function vector2 table:egpAlign() {
+    local Properties = This["properties", table]
+    return Properties["align", vector2]
+}
+
+function void table:egpAlign(Align:vector2) {
+    local Id = This:egpId()
+    local Properties = This["properties", table]
+    local Type = EGP_SCREEN:egpObjectType(Id)
+    if(Type == "text" | Type == "textlayout") {
+        Properties["align", vector2] = Align
+        EGP_SCREEN:egpAlign(Id, Align:x(), Align:y())
+        LIB_EGP["mirror_queue" , table]:pushTable(table(
+            "type" = "align",
+            "id" = Id,
+            "x" = Align:x(),
+            "y" = Align:y()
+        ))
+    } else {
+        Properties:remove("text")
+        Properties:remove("font")
+        Properties:remove("align")
+    }
+}
+
+# =============================== OBJECT DRWAING: DRAW ===============================
+
+function void table:egpDraw() {
+    local Id = This:egpId()
+    local Type = This:egpType()
+    local Properties = This["properties", table]
+    
+    local CreateObject = function(Id:number, Type:string) {
+        local Object = noegpobject()
+        if(Id == 0) {
+            return Object
+        }
+        
+        switch(Type) {
+            case "",
+            case "box",
+                local Outline = Properties["outline", number]
+                local Rounded = Properties["rounded", number]
+                
+                if(Outline > 0 && Rounded > 0) {
+                    Object = EGP_SCREEN:egpRoundedBoxOutline(Id, vec2(), vec2())
+                    EGP_SCREEN:egpSize(Id, Outline)
+                    LIB_EGP["mirror_queue" , table]:pushTable(table(
+                        "type" = "create",
+                        "id" = Id,
+                        "objecttype" = "roundedboxoutline",
+                        "position" = vec2(),
+                        "size" = vec2(),
+                        "outline" = Outline
+                    ))
+                } elseif(Rounded > 0) {
+                    Object = EGP_SCREEN:egpRoundedBox(Id, vec2(), vec2())
+                    LIB_EGP["mirror_queue" , table]:pushTable(table(
+                        "type" = "create",
+                        "id" = Id,
+                        "objecttype" = "roundedbox",
+                        "position" = vec2(),
+                        "size" = vec2()
+                    ))
+                } elseif(Outline > 0) {
+                    Object = EGP_SCREEN:egpBoxOutline(Id, vec2(), vec2())
+                    EGP_SCREEN:egpSize(Id, Outline)
+                    LIB_EGP["mirror_queue" , table]:pushTable(table(
+                        "type" = "create",
+                        "id" = Id,
+                        "objecttype" = "boxoutline",
+                        "position" = vec2(),
+                        "size" = vec2(),
+                        "outline" = Outline
+                    ))
+                } else {
+                    Object = EGP_SCREEN:egpBox(Id, vec2(), vec2())
+                    LIB_EGP["mirror_queue" , table]:pushTable(table(
+                        "type" = "create",
+                        "id" = Id,
+                        "objecttype" = "box",
+                        "position" = vec2(),
+                        "size" = vec2()
+                    ))
+                }
+            break
+            case "circle",
+                local Outline = Properties["outline", number]
+                
+                if(Outline > 0) {
+                    Object = EGP_SCREEN:egpCircleOutline(Id, vec2(), vec2())
+                    LIB_EGP["mirror_queue" , table]:pushTable(table(
+                        "type" = "create",
+                        "id" = Id,
+                        "objecttype" = "circleoutline",
+                        "position" = vec2(),
+                        "size" = vec2(),
+                        "outline" = Outline
+                    ))
+                } else {
+                    Object = EGP_SCREEN:egpCircle(Id,vec2(), vec2())
+                    LIB_EGP["mirror_queue" , table]:pushTable(table(
+                        "type" = "create",
+                        "id" = Id,
+                        "objecttype" = "circle",
+                        "position" = vec2(),
+                        "size" = vec2()
+                    ))
+                }
+            break
+            case "text",
+                Object = EGP_SCREEN:egpTextLayout(Id, "", vec2(), vec2())
+                LIB_EGP["mirror_queue" , table]:pushTable(table(
+                    "type" = "create",
+                    "id" = Id,
+                    "objecttype" = "text",
+                    "position" = vec2(),
+                    "size" = vec2(),
+                    "text" = ""
+                ))
+            break
+            default,
+                Object = noegpobject()
+        }
+        
+        return Object
+    }
+    
+    #create the object
+    local Object = This["object", egpobject]
+    if(Object == noegpobject()) {
+        Object = CreateObject(Id, Type)[egpobject]
+    } elseif(Object:getObjectType() != Type) {
+        Object = CreateObject(Id, Type)[egpobject]
+    } else {
+        Object = CreateObject(Id, Type)[egpobject]
+    }
+    This["object", egpobject] = Object
+    
+    if(This["object", egpobject] == noegpobject()) {
+        return
+    }
+    
+    #PARENTING
+    try {
+        local Parent = This:egpParent()
+        local ParentId = Parent["id", number]
+        if(ParentId != 0 & EGP_SCREEN:egpParent(Id) != ParentId) {
+            EGP_SCREEN:egpParent(Id, ParentId)
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "parent",
+                "id" = Id,
+                "parent" = ParentId
+            ))
+        }
+    } catch(_:string) {}
+    
+    #PATH & NAME
+    local Name = Properties["name", string]
+    
+    #name changed, need to update paths
+    if(This["name", string] != "" && This["name", string] != Name) {
+        This["name", string] = Name #TODO: update all children
+    }
+    
+    if(This["name", string] == "" || This["name", string] != Name) {
+        This["name", string] = Name
+    }
+    
+    try {
+        local Parent = This:egpParent()
+        local ChildrenByName = Parent["children", table]["name", table]
+        ChildrenByName[Name, table] = This 
+        
+        if(Name != "") {
+            local Paths = egpPaths()
+            local Path = Parent:egpPath() + (Parent:egpPath() == "" ? "" : ".") + Parent:egpName()
+            
+            if(This["path", string] != "" && Paths:exists(This["path", string]) && This["path", string] != Path) {
+                Paths:removeTable(This["path", string])
+            }
+            This["path", string] = Path
+            
+            Paths[Path + "." + Name, table] = This
+        }
+    } catch(_:string) {}
+    
+    #PROPERTIES:
+    local TypeIds = Properties:typeids()
+    
+    #SIZE:
+    if(TypeIds:exists("size")) {
+        if(TypeIds["size", string] == "xv2") {
+            This:egpSize(Properties["size", vector2])
+        } elseif(TypeIds["size", string] == "t") {
+            This:egpSize(Properties["size", table])
+        } else {
+            This:egpSize(table("width" = "100%","height" = "100%"))
+        }
+    } else {
+        This:egpSize(table("width" = "100%","height" = "100%"))
+    }
+    
+    #POSITION:
+    if(TypeIds:exists("position")) {
+        if(TypeIds["position", string] == "xv2") {
+            This:egpPos(Properties["position", vector2])
+        } elseif(TypeIds["position", string] == "t") {
+            This:egpPos(Properties["position", table])
+        } else {
+            This:egpPos(vec2(0,0))
+        }
+    } else {
+        This:egpPos(vec2(0,0))
+    }
+    
+    #ANCHOR:
+    if(TypeIds:exists("anchor")) {
+        if(TypeIds["anchor", string] == "xv2") {
+            This:egpAnchor(Properties["anchor", vector2])
+        } elseif(TypeIds["anchor", string] == "t") {
+            This:egpAnchor(Properties["anchor", table])
+        } else {
+            This:egpAnchor(vec2(0,0))
+        }
+    } else {
+        This:egpAnchor(vec2(0,0))
+    }
+    
+    #OUTLINE
+    #[
+    if(TypeIds:exists("outline")) {
+        if(TypeIds["outline", string] == "n") {
+            This:egpOutline(Properties["outline", number])
+        } else {
+            This:egpOutline(0)
+        }
+    } else {
+        This:egpOutline(0)
+    }
+    ]#
+    
+    #MATERIAL:
+    This:egpMaterial(Properties["material", string])
+    
+    This:egpAngle(Properties["angle", number])
+    
+    #TEXT:
+    This:egpText(Properties["text", string])
+    This:egpAlign(Properties["align", vector2])
+    
+    #FONT:
+    local Font = Properties["font", table]
+    local FontTypeIds = Font:typeids()
+    if(FontTypeIds:exists("size")) {
+        if(FontTypeIds["size", string] == "n") {
+            This:egpFont(Font["font", string], Font["size", number])
+        } elseif(FontTypeIds["size", string] == "s") {
+            This:egpFont(Font["font", string], egpPixels(Font["size", string], This:egpSize():y()))
+        } else {
+            This:egpFont(Font["font", string], 18)
+        }
+    } else {
+        This:egpFont(Font["font", string], 18)
+    }
+    
+    #COLOUR:
+    if(TypeIds:exists("color")) {
+        if(TypeIds["color", string] == "s") {
+            This:egpColor(Properties["color", string])
+        } elseif(TypeIds["color", string] == "v") {
+            This:egpColor(Properties["color", vector])
+        } elseif(TypeIds["color", string] == "xv4") {
+            This:egpColor(Properties["color", vector4])
+        } else {
+            This:egpColor(vec4(0,0,0,0))
+        }
+    } else {
+        This:egpColor(vec4(0,0,0,0))
+    }
+}
+
+#TODO: stopPropogation
+function table:egpEvent(Name:string, Event:table, Bubble:number) {
+    local Properties = This["properties", table]
+    local Events = Properties["events", table]
+    local EventTypeIds = Events:typeids()
+    
+    local TargetEvent = table():merge(Event)
+    TargetEvent["phase", string] = "target"
+    TargetEvent["currentTarget", table] = This
+    TargetEvent["bubble", number] = Bubble
+    
+    if(EventTypeIds:exists(Name)) {
+        if(EventTypeIds[Name, string] == "r") {
+            foreach(_:number, Callback:function = Properties["events", table][Name, array]) {
+                egpCallback(Callback, TargetEvent, LIB_EGP["index", number], 0)
+            }
+        } elseif(EventTypeIds[Name, string] == "f") {
+            egpCallback(Properties["events", table][Name, function], TargetEvent, LIB_EGP["index", number], 0)
+        }
+    }
+    
+    egpCallback(function(_:table, _:function) {
+        local Bubble = TargetEvent["bubble", number] & Bubble
+        if(Bubble & This:egpHasParent()) {
+            local BubbleEvent = table():merge(TargetEvent)
+            BubbleEvent["phase", string] = "bubble"
+            BubbleEvent["currentTarget", table] = This:egpParent()
+            
+            egpCallback(function(Event:table, _:function) {
+                Event["target", table]:egpEvent(Event["name", string], Event["event", table], Bubble)
+            }, table("target" = This:egpParent(), "name" = Name, "event" = BubbleEvent), LIB_EGP["index", number], 0)
+        }
+    }, table(), LIB_EGP["index", number], 0)
+}
+
+function table:egpEventStopPropogation() {
+    This["bubble", number] = 0
+}
+
+function table:egpEvent(Name:string, Event:table) {
+    This:egpEvent(Name, Event, 0)
+}
+
+# =============================== OBJECT DRWAING: ADD ===============================
+function void table:egpAdd(Properties:table, Hide:number, Callback:function, AddEvent:table) {
+    egpCallback(function(Event:table, _:function) {
+        if(!Event:exists("target")) {
+            return
+        }
+        
+        local Parent = Event["target", table]
+        local Properties = Event["properties", table]
+        local Hide = Event["hide", number]
+        
+        #create object
+        local Children = Parent:egpChildren()
+        
+        local Id = egpNew()
+        local Target = table(
+            "parent" = Parent,
+            "id" = Id,
+            "index" = Children:count() + 1,
+            "position" = vec2(0, 0),
+            "size" = vec2(0, 0),
+            "object" = noegpobject(),
+            "children" = table(
+                "name" = table(),
+                "index" = table()
+            ),
+            "properties" = Properties
+        )
+        Children:pushTable(Target)
+        Target:egpDraw()
+        
+        LIB_EGP["data", table]["elements", table][Id, table] = Target
+        
+        #added callback
+        AddEvent["target", table] = Target
+        egpCallback(Callback, AddEvent, LIB_EGP["index", number], 0)
+        
+        #item
+        if(Properties:exists("item")) {
+            Target["item", table] = Properties:removeTable("item")
+        }
+        
+        #queue children
+        if(Properties:exists("children")) {
+            foreach(_:number, Properties:table = Properties["children", table]) {
+                Target:egpAdd(Properties, Hide, function(_:table, _:function) {}, table())
+            }
+            Properties:remove("children")
+        }
+        
+        #unhide
+        if(Hide == 1) {
+            local Id = Target:egpId()
+            EGP_SCREEN:egpPos(Id, vec2(9999,9999))
+            LIB_EGP["mirror_queue" , table]:pushTable(table(
+                "type" = "position",
+                "id" = Id,
+                "position" = vec2(9999,9999)
+            ))
+            
+            egpCallback(function(Event:table, _:function) {
+                local Target = Event["target", table]
+                local Properties = Target["properties", table]
+                local TypeIds = Properties:typeids()
+                
+                #POSITION:
+                if(TypeIds:exists("position")) {
+                    if(TypeIds["position", string] == "xv2") {
+                        Target:egpPos(Properties["position", vector2])
+                    } elseif(TypeIds["position", string] == "t") {
+                        Target:egpPos(Properties["position", table])
+                    }
+                } else {
+                    Target:egpPos(vec2(0,0))
+                }
+                
+                #ANCHOR:
+                if(TypeIds:exists("anchor")) {
+                    if(TypeIds["anchor", string] == "xv2") {
+                        Target:egpAnchor(Properties["anchor", vector2])
+                    } elseif(TypeIds["anchor", string] == "t") {
+                        Target:egpAnchor(Properties["anchor", table])
+                    }
+                } else {
+                    Target:egpAnchor(vec2(0,0))
+                }
+            }, table("target" = Target), LIB_EGP["index", number], 0)
+        }
+        
+        Target:egpEvent("added", table("target" = Target))
+    }, table("target" = This, "properties" = Properties, "hide" = Hide), LIB_EGP["index", number], 0)
+}
+
+function void table:egpAdd(Properties:table, Callback:function, AddEvent:table) {
+    This:egpAdd(Properties, 1, Callback, AddEvent)
+}
+
+function void table:egpAdd(Properties:table) {
+    This:egpAdd(Properties, function(_:table, _:function) {}, table())
+}
+
+# =============================== OBJECT DRWAING: REMOVE ===============================
+function void table:egpRemove() {
+    local Id = This:egpId()
+    EGP_SCREEN:egpPos(Id, vec2(9999,9999))
+    LIB_EGP["mirror_queue" , table]:pushTable(table(
+        "type" = "position",
+        "id" = Id,
+        "position" = vec2(9999,9999)
+    ))
+    
+    egpCallback(function(Event:table, Callback:function) {
+        local Target = Event["target", table]
+        
+        if(!Event:exists("remove")) {
+            foreach(_:number, Child:table = Target:egpChildren()) {
+                egpCallback(Callback, table("target" = Child), LIB_EGP["index", number], 0)
+            }
+            
+            egpCallback(Callback, table("target" = Target, "remove" = 1), LIB_EGP["index", number], 0)
+            
+            return
+        }
+        
+        local Parent = Target:egpParent()
+        local Children = Parent:egpChildren()
+        Children:remove(Target:egpIndex())
+        
+        for(I = Target:egpIndex(), Children:count()) {
+            Children[I, table]["index", number] = I
+        }
+        
+        local ChildrenByName = Parent["children", table]["name", table]
+        local Name = Target:egpName()
+        if(Name != "") {
+            if(ChildrenByName:exists(Name)) {
+                ChildrenByName:remove(Name)
+            }
+        }
+        
+        local Path = Target:egpPath() + "." + Target:egpName()
+        local Paths = egpPaths()
+        if(Paths:exists(Path)) {
+            Paths:remove(Path)
+        }
+        
+        local Id = Target:egpId()
+        LIB_EGP["data", table]["elements", table]:remove(Id)
+        egpFree(Id)
+        Target["object", egpobject] = noegpobject()
+        Target["id", number] = 0
+        
+        #removed callback
+        Target:egpEvent("removed", table(), 0)
+    }, table("target" = This), LIB_EGP["index", number], 1) #removing takes some time, lets clk
+}
+
+function table:egpRemoveChildren() {
+    local Children = This:egpChildren()
+    for(I = Children:count(), 1, -1) {
+        Children[I, table]:egpRemove()
+    }
+}
+
+function table:egpList(List:table, Start:number, Max:number, Spacing:number, Vertical:number, Hide:number, Callback:function) {
+    if(Hide) {
+        local Id = This:egpId()
+        EGP_SCREEN:egpPos(Id, vec2(9999, 99999))
+        LIB_EGP["mirror_queue" , table]:pushTable(table(
+            "type" = "position",
+            "id" = Id,
+            "position" = vec2(9999,9999)
+        ))
+    }
+    
+    local Count = min(Max, max(0, List:count() - Start + 1))
+    if(This:egpChildren():count() > Count) {
+        for(I = This:egpChildren():count(), Count + 1, -1) {
+            This:egpChild(I):egpRemove()
+        }
+    }
+    
+    local Size = table()
+    if(Vertical) {
+        Size["width", string] = "100%"
+        Size["height", number] = (This:egpSize():y() - (Max - 1) * Spacing) / Max
+    } else {
+        Size["width", number] = (This:egpSize():x() - (Max - 1) * Spacing) / Max
+        Size["height", string] = "100%"
+    }
+    
+    for(I = 1, Count) {
+        local ListItem = List[(Start - 1) + I, table]
+        
+        local Target = egpNoElement()
+        if(I <= This:egpChildren():count()) {
+            Target = This:egpChild(I)
+        }
+        
+        local Position = table()
+        if(Vertical) {
+            Position["x", number] = 0
+            Position["y", number] = ((I - 1) * Size["height", number]) + ((I - 1) * Spacing)
+        } else {
+            Position["x", number] = ((I - 1) * Size["width", number]) + ((I - 1) * Spacing)
+            Position["y", number] = 0
+        }
+        
+        local Properties = Callback(table("target" = Target, "item" = ListItem, "index" = I, "list" = List, "position" = Position, "size" = Size), Callback)[table]
+        if(Target == egpNoElement()) {
+            This:egpAdd(Properties, function(Event:table, _:function) {
+                local Target = Event["target", table]
+                Target["item", table] = Event["item", table]
+                Target["callback", function] = Event["callback", function]
+                Target["render", function] = function() {
+                    Target["callback", function](table("target" = Target, "item" = Event["item", table], "index" = Event["index", number], "list" = Event["list", table], "position" = Event["position", table], "size" = Event["size", table]), Target["callback", function])[table]
+                }
+            }, table("item" = ListItem, "index" = I, "list" = List, "position" = Position, "size" = Size, "callback" = Callback))
+        } else {
+            egpCallback(function(Event:table, _:function) {
+                local Target = Event["target", table]
+                Target["item", table] = Event["item", table]
+                Target["callback", function] = Event["callback", function]
+                Target["render", function] = function() {
+                    Target["callback", function](table("target" = Target, "item" = Event["item", table], "index" = Event["index", number], "list" = Event["list", table], "position" = Event["position", table], "size" = Event["size", table]), Target["callback", function])[table]
+                }
+            }, table("target" = Target, "item" = ListItem, "index" = I, "list" = List, "position" = Position, "size" = Size, "callback" = Callback), LIB_EGP["index", number], 0)
+        }
+    }
+    
+    if(Hide) {
+        egpCallback(function(Event:table, _:function) {
+            local Target = Event["target", table]
+            local Properties = Target["properties", table]
+            local TypeIds = Properties:typeids()
+            
+            #POSITION:
+            if(TypeIds:exists("position")) {
+                if(TypeIds["position", string] == "xv2") {
+                    Target:egpPos(Properties["position", vector2])
+                } elseif(TypeIds["position", string] == "t") {
+                    Target:egpPos(Properties["position", table])
+                }
+            } else {
+                Target:egpPos(vec2(0,0))
+            }
+            
+            #ANCHOR:
+            if(TypeIds:exists("anchor")) {
+                if(TypeIds["anchor", string] == "xv2") {
+                    Target:egpAnchor(Properties["anchor", vector2])
+                } elseif(TypeIds["anchor", string] == "t") {
+                    Target:egpAnchor(Properties["anchor", table])
+                }
+            } else {
+                Target:egpAnchor(vec2(0,0))
+            }
+        }, table("target" = This), LIB_EGP["index", number], 0)
+    }
+}
+
+function table:egpList(List:table, Start:number, Max:number, Spacing:number, Callback:function) {
+    This:egpList(List, Start, Max, Spacing, 1, 1, Callback)
+}
+
+function table:egpGrid(Rows:table, Spacing:number, Hide:number, Callback:function) {
+    This:egpList(Rows, 1, Rows:count(), Spacing, 1, Hide, function(Event:table, _:function) {
+        local Target = Event["target", table]
+        
+        local ListItem = Event["item", table]
+        local Position = Event["position", table]
+        local Size = Event["size", table]
+        
+        if(Target != egpNoElement()) {
+            Target:egpList(ListItem, 1, ListItem:count(), Spacing, 1, 0, Callback)
+            return egpNoElement()
+        }
+        
+        return table(
+            "name" = "row",
+            "type" = "box",
+            "position" = Position,
+            "size" = Size,
+            "events" = table(
+                "added" = function(Event:table, _:function) {
+                    Event["target", table]:egpList(ListItem, 1, ListItem:count(), Spacing, 0, 0, Callback)
+                }
+            )
+        )
+    })
+}
+
+function table:egpScrollableList(List:table, Max:number, Spacing:number, Style:table, Hide:number, Callback:function) {
+    local ThumbSize = Max / List:count()
+    
+    local MouseDownEvent = function(Event:table, _:function) {
+        if(List:count() <= Max) {
+            return
+        }
+        
+        local Position = Event["position", vector2]
+        
+        local ElementTarget = Event["target", table]
+        local ElementTargetPosition = ElementTarget:egpGlobalPos()
+        local ElementTargetSize = ElementTarget:egpSize()
+        local ElementButton = ElementTarget:egpChild("thumb")
+        
+        local Normal = (Position:y() - ElementTargetPosition:y()) / ElementTargetSize:y()
+        
+        local Y = min(1 - ThumbSize, max(0, Normal - ThumbSize * 0.5))
+        local Start = floor((Y / (1 - ThumbSize)) * (List:count() - Max)) + 1
+        
+        ElementButton:egpPos(table("x" = "50%", "y" = format("%0.2f%%", Y * 100)))
+        ElementTarget:egpParent():egpChild("container"):egpList(List, Start, Max, Spacing, 1, 0, Callback)
+    }
+    
+    if(!This:egpHasChild("container") & !This:egpHasChild("track")) {
+        This:egpRemoveChildren()
+        
+        This:egpAdd(table(
+            "name" = "container",
+            "anchor" = table("x" = "0%", "y" = "0%"),
+            "position" = table("x" = "0%", "y" = "0%"),
+            "size" = table("width" = "92%", "height" = "100%"),
+            "events" = table(
+                "added" = function(Event:table, _:function) {
+                    Event["target", table]:egpList(List, 1, Max, Spacing, Callback)
+                }
+            )
+        ))
+        
+        This:egpAdd(table(
+            "name" = "track",
+            "anchor" = table("x" = "100%", "y" = "0%"),
+            "position" = table("x" = "100%", "y" = "0%"),
+            "size" = table("width" = "6%", "height" = "100%"),
+            "color" = Style["background", string],
+            "rounded" = Style["rounded", number],
+            "children" = table(
+                table(
+                    "name" = "thumb",
+                    "anchor" = table("x" = "50%", "y" = "0%"),
+                    "position" = table("x" = "50%", "y" = "0%"),
+                    "size" = table("width" = "100%", "height" = "100%"),
+                    "color" = vec4(87,13,248,255),
+                    "rounded" = Style["rounded", number],
+                    "outline" = Style["outline", number],
+                    "mouse-events" = "none",
+                    "events" = table(
+                        "added" = function(Event:table, _:function) {
+                            if(List:count() > Max) {
+                                Event["target", table]:egpSize(table("width" = "100%", "height" = format("%0.2f%%", ThumbSize * 100)))
+                                Event["target", table]:egpColor(Style["button", table]["active", string])
+                            } else {
+                                Event["target", table]:egpSize(table("width" = "100%", "height" = "100%"))
+                                Event["target", table]:egpColor(Style["button", table]["disabled", string])
+                            }
+                        }
+                    )
+                )
+            ),
+            "events" = table(
+                "mousedown" = MouseDownEvent
+            )
+        ))
+        
+        return
+    }
+    
+    local ElementScroll = This:egpChild("track")
+    ElementScroll["properties", table]["events", table]["mousedown", function] = MouseDownEvent
+    
+    local ElementScrollButton = ElementScroll:egpChild("thumb")
+    ElementScrollButton:egpPos(table("x" = "50%", "y" = 0))
+    if(List:count() > Max) {
+        ElementScrollButton:egpSize(table("width" = "100%", "height" = format("%0.2f%%", ThumbSize * 100)))
+        ElementScrollButton:egpColor(Style["button", table]["active", string])
+    } else {
+        ElementScrollButton:egpSize(table("width" = "100%", "height" = "100%"))
+        ElementScrollButton:egpColor(Style["button", table]["disabled", string])
+    }
+    
+    local ElementConatiner = This:egpChild("container")
+    ElementConatiner:egpList(List, 1, Max, Spacing, 1, Hide, Callback)
+}
+
+function void table:egpAnimate(Callback:function) {
+    local Animations = LIB_EGP["data", table]["animations", table]
+    Animations[This:id(), table] = table(
+        "target" = This,
+        "callback" = Callback,
+        "time" = 0
+    )
+    timer("library.egp.animate", 0)
+}
+
+if(LIB_EGP["input", number] == 1) {
+    if(egpUserChanged()) {
+        egpCallback(function(Event:table, Callback:function) {
+            local Target = Event["target", table]
+            local User = Event["user", entity]
+            local Position = Event["position", vector2]
+            local GlobalPos = Event["globalpos", vector2] #temporary fix as globalpos is bugged: https://github.com/wiremod/wire/issues/2949
+            
+            local Children = Target:egpChildren()
+            if(Children:count() > 0) {
+                for(I = Children:count(), 1, -1) {
+                    local Child = Children[I, table]
+                    local Object = Child["object", egpobject]
+                    local Contains = inrange(Position, GlobalPos + Object:getPos(), GlobalPos + Object:getPos() + Object:getSize())
+                    if(Child["properties", table]["mouse-events", string] == "none") {
+                        Contains = 0
+                    }
+                    if(Contains) {
+                        egpCallback(Callback, table("target" = Child, "user" = User, "position" = Position, "globalpos" = GlobalPos + Object:getPos()), LIB_EGP["index", number], 0)
+                        return
+                    }
+                }
+            }
+            
+            Target:egpEvent("mousedown", table("target" = Target, "user" = User, "position" = Position), 1)
+        }, table("target" = egpDocument(), "user" = egpUser(), "position" = egpWirelink():egpCursor(egpUser()), "globalpos" = vec2(0,0)), 1, 0)
+    }
+    
+    if(clk("library.egp.mouseover")) {
+        local User = LIB_EGP["data", table]["user", entity]
+        if(User != noentity() && User:isValid()) {
+            if(User:isPlayer()) {
+                timer("library.egp.mouseover", 250)
+                
+                if(egpWirelink():egpCursor(User) != vec2(-1,-1)) {
+                    egpCallback(function(Event:table, Callback:function) {
+                        local Target = Event["target", table]
+                        local User = Event["user", entity]
+                        local Position = Event["position", vector2]
+                        local GlobalPos = Event["globalpos", vector2] #temporary fix as globalpos is bugged: https://github.com/wiremod/wire/issues/2949
+                        
+                        local Children = Target:egpChildren()
+                        if(Children:count() > 0) {
+                            for(I = Children:count(), 1, -1) {
+                                local Child = Children[I, table]
+                                local Object = Child["object", egpobject]
+                                local Contains = inrange(Position, GlobalPos + Object:getPos(), GlobalPos + Object:getPos() + Object:getSize())
+                                if(Child["properties", table]["mouse-events", string] == "none") {
+                                    Contains = 0
+                                }
+                                if(Contains) {
+                                    egpCallback(Callback, table("target" = Child, "user" = User, "position" = Position, "globalpos" = GlobalPos + Object:getPos()), LIB_EGP["index", number], 0)
+                                    return
+                                }
+                            }
+                        }
+                        
+                        local Data = LIB_EGP["data", table]
+                        local Hot = Data["hot", table]
+                        if(Hot != Target) {
+                            Hot:egpEvent("mouseexit", table("user" = User, "position" = Position, "target" = Hot))
+                            Data["hot", table] = Target
+                            Target:egpEvent("mouseenter", table("user" = User, "position" = Position, "target" = Target))
+                        }
+                        
+                        Target:egpEvent("mouseover", table("user" = User, "position" = Position, "target" = Target), 1)
+                    }, table("target" = egpDocument(), "user" = User, "position" = egpWirelink():egpCursor(User), "globalpos" = vec2(0,0)), 1, 0)
                 }
             }
         }
     }
-    
-    function number egpScreenChanged() {
-        return EGP_SCREEN & ~EGP_SCREEN || ((first() || dupefinished()) && egpScreen():entity():isValid())
-    }
-    
-    function number egpUserChanged() {
-        return EGP_USER & ~EGP_USER
-    }
-    
-    function entity egpUser() {
-        return EGP_USER
-    }
-    
-    function vector2 entity:egpToScreen(Dir:vector, Fov:number) {
-        local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
-        local FDP = CamAngle:forward():dot(Dir)
+}
+
+if(clk("library.egp.clk")) {
+    local Queue = LIB_EGP["queue", table]
+    while(Queue:count() > 0 && perf(85)) {
+        local Event = Queue:popTable()
+        local Type = Event["type", string]
         
-        if(FDP <= 0) {
-            return vec2(-1, -1)
+        LIB_EGP["index", number] = Queue:count() + 1
+        
+        local Clk = 0
+        switch(Type) {
+            case "clk",
+                Clk = 1
+            break
+            case "callback",
+                local Callback = Event["callback", function]
+                local Data = Event["data", table]
+                Callback(Data, Callback)
+            break
+            default,
+            break
         }
         
-        local VProj = 4 * egpScrH(This) / (6 * tan(0.5 * Fov)) / FDP * Dir
-        
-        return vec2(
-            0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
-            0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
-        )
+        if(Clk) {
+            break
+        }
     }
     
-    function vector2 entity:egpWorldToScreen(WorldPos:vector, Fov:number) {
-        local Dir = WorldPos - This:shootPos()
-        local CamAngle = (This:aimPos() - This:shootPos()):toAngle()
-        local FDP = CamAngle:forward():dot(Dir)
-        
-        if(FDP <= 0) {
-            return vec2(-1, -1)
-        }
-        
-        local VProj = 4 * egpScrH(This) / (6 * tan(0.5 * Fov)) / FDP * Dir
-        
-        return vec2(
-            0.5 * egpScrW(This) + CamAngle:right():dot(VProj), 
-            0.5 * egpScrH(This) - CamAngle:up():dot(VProj)
-        )
+    if(Queue:count() > 0) {
+        timer("library.egp.clk", 0)
     }
     
-    function void wirelink:egpFixMaterials() {
-        foreach(_:number, Id:number = This:egpObjectIndexes()) {
-            local Material = This:egpMaterial(Id)
-            if(Material != "") {
-                This:egpMaterial(Id, "")
-                This:egpMaterial(Id, Material)
-            }
+    if(LIB_EGP["mirror", entity]:isValid()) {
+        dsSendDirect("library.egp.mirror", LIB_EGP["mirror", entity], LIB_EGP["mirror_queue" , table])
+    }
+    LIB_EGP["mirror_queue", table] = table()
+}
+
+if(clk("library.egp.animate")) {
+    local Animations = LIB_EGP["data", table]["animations", table]
+    
+    local Keys = Animations:keys()
+    for(I = Animations:count(), 1, -1) {
+        local Key = Keys[I, string]
+        local Animation = Animations[Key, table]
+        local Target = Animation["target", table]
+        local Callback = Animation["callback", function]
+        local Time = Animation["time", number]
+        
+        if(!Target:egpValid()) {
+            Animations:remove(Key)
+            break
         }
+        
+        if(Time > 1) {
+            Animations:remove(Key)
+        }
+        
+        Callback(table("target" = Target, "time" = min(1, Time)), Callback)
+        Animation["time", number] = Time + 1 / 24
+    }
+    
+    if(Animations:count() > 0) {
+        timer("library.egp.animate", 1 / 24)
     }
 }

@@ -1,0 +1,16 @@
+@name library/library
+@persist LIB_LIBRARIES:table
+
+if(first() | dupefinished()) {
+    if(LIB_LIBRARIES:count() == 0) {
+        LIB_LIBRARIES["library/library", number] = 1
+    }
+}
+
+function include(Path:string) {
+    LIB_LIBRARIES[Path, number] = 1
+}
+
+function number included(Path:string) {
+    return LIB_LIBRARIES[Path, number] == 1
+}
