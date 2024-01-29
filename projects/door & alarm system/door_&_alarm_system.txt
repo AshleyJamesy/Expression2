@@ -34,7 +34,7 @@ if(first() || dupefinished()) {
     }
     
     function number string:isTeamValid() {
-        foreach(_:number, TeamName:string = TEAMS) {
+        foreach(_:number, TeamName:string = teamNames()) {
             if(This == TeamName) {
                 return 1
             }
