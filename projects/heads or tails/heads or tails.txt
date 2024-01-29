@@ -7,8 +7,8 @@
 @persist CASINO:number WINNER:entity TIME:number
 
 if(first() || dupefinished()) {
-    CASINO = 0
-    PRICE = 10000
+    CASINO = 0 #0 = Player Vs Player, 1 = Player Vs You
+    PRICE = 1
     FEE = 0.1
     
     #------------------------------------------------------------------------------------------------
@@ -34,29 +34,6 @@ if(first() || dupefinished()) {
             This:toString():match("([-]?)(%d+)([.]?%d*)")
         
         return Match[1, string] + Match[2, string]:reverse():replaceRE("(%d%d%d)", "%1,"):reverse():replaceRE("^,", "") + Match[3, string]
-    }
-    
-    function void wire() {
-        findIncludePlayerProps(owner())
-        findByClass("gmod_wire_egp*")
-        findSortByDistance(entity():pos())
-        
-        if(find()) {   
-            if(find():owner() == owner()) {
-                if(!EGP_SCREEN:entity()) {
-                    #ifdef entity:createWire(entity, string, string)
-                    
-                    local EGP = find()
-                    entity():createWire(EGP, "EGP_SCREEN", "wirelink")
-                    entity():createWire(EGP, "EGP_USER", "User")
-                    
-                    #endif
-                }
-            }
-        }
-        
-        EGP_SCREEN:egpClear()
-        EGP_SCREEN:egpDrawTopLeft(1)
     }
     
     function entity:ulxSendPrivateMessage(String:string) {
@@ -103,24 +80,22 @@ if(first() || dupefinished()) {
                             timer("timeout", 15000)
                         }
                     }
-                } else {
-                    if(HEADS == This) {
-                        if(HEADS_PAID) {
-                            HEADS = noentity()
-                            HEADS_PAID = 0
-                            COUNTDOWN = 0
-                            stoptimer("countdown")
-                            moneyGive(This, PRICE)
-                            EGP_SCREEN:egpSetText(4, "Casino")
-                            EGP_SCREEN:egpSetText(6, "VS")
-                            
-                            #casino vs player
-                            if(CASINO) {
-                                TAILS = owner()
-                                TAILS_PAID = 0
-                                EGP_SCREEN:egpSetText(4, "TAILS")
-                                stoptimer("timeout")
-                            }
+                } elseif(HEADS == This) {
+                    if(HEADS_PAID) {
+                        HEADS = noentity()
+                        HEADS_PAID = 0
+                        COUNTDOWN = 0
+                        stoptimer("countdown")
+                        moneyGive(This, PRICE)
+                        EGP_SCREEN:egpSetText(4, "Casino")
+                        EGP_SCREEN:egpSetText(6, "VS")
+                        
+                        #casino vs player
+                        if(CASINO) {
+                            TAILS = owner()
+                            TAILS_PAID = 0
+                            EGP_SCREEN:egpSetText(4, "TAILS")
+                            stoptimer("timeout")
                         }
                     }
                 }
@@ -141,24 +116,22 @@ if(first() || dupefinished()) {
                             }
                         }
                     }
-                } else {
-                    if(TAILS == This) {
-                        if(TAILS_PAID) {
-                            TAILS = noentity()
-                            TAILS_PAID = 0
-                            COUNTDOWN = 0
-                            stoptimer("countdown")
-                            moneyGive(This, PRICE)
-                            EGP_SCREEN:egpSetText(4, "TAILS")
-                            EGP_SCREEN:egpSetText(6, "VS")
-                            
-                            #casino vs player
-                            if(CASINO) {
-                                HEADS = noentity()
-                                HEADS_PAID = 0
-                                EGP_SCREEN:egpSetText(2, "HEADS")
-                                stoptimer("timeout")
-                            }
+                } elseif(TAILS == This) {
+                    if(TAILS_PAID) {
+                        TAILS = noentity()
+                        TAILS_PAID = 0
+                        COUNTDOWN = 0
+                        stoptimer("countdown")
+                        moneyGive(This, PRICE)
+                        EGP_SCREEN:egpSetText(4, "TAILS")
+                        EGP_SCREEN:egpSetText(6, "VS")
+                        
+                        #casino vs player
+                        if(CASINO) {
+                            HEADS = noentity()
+                            HEADS_PAID = 0
+                            EGP_SCREEN:egpSetText(2, "HEADS")
+                            stoptimer("timeout")
                         }
                     }
                 }
@@ -167,6 +140,9 @@ if(first() || dupefinished()) {
     }
     
     function void draw() {
+        EGP_SCREEN:egpClear()
+        EGP_SCREEN:egpDrawTopLeft(1)
+        
         local I = 0
         I++ #1
         EGP_SCREEN:egpBox(I, vec2(), vec2(512, 256))
@@ -198,16 +174,13 @@ if(first() || dupefinished()) {
         EGP_SCREEN:egpAlign(I, 1, 1)
     }
     
-    wire()
     draw()
 }
 
 if(EGP_USER & ~EGP_USER) {
-    local Cursor = EGP_SCREEN:egpCursor(EGP_USER)
-    
     if(WINNER == noentity()) {
         foreach(Name:string, Id:number = BUTTONS) {
-            if(inrange(Cursor, EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpPos(Id) + EGP_SCREEN:egpSize(Id))) {
+            if(inrange(EGP_SCREEN:egpCursor(EGP_USER), EGP_SCREEN:egpPos(Id), EGP_SCREEN:egpPos(Id) + EGP_SCREEN:egpSize(Id))) {
                 EGP_USER:pressed(Name)
                 break
             }
