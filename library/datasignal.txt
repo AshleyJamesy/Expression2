@@ -25,6 +25,10 @@ if(first() | dupefinished()) {
         dsSendDirect(Signal, This, Data)
     }
     
+    function void entity:dsSend(Signal:string, Data:function) {
+        dsSendDirect(Signal, This, Data)
+    }
+    
     function void entity:dsSend(Signal:string, Data:matrix) {
         dsSendDirect(Signal, This, Data)
     }
