@@ -4,6 +4,7 @@
 @persist [CATEGORIES, ITEMS, CART, SHIPMENTS]:table [TAX]:number
 @persist [TAB]:string
 @persist [PLAYER]:entity
+@persist [GROSS]:number
 
 #include "library/string"
 #include "library/table"
@@ -698,6 +699,8 @@ function table:tabList(List:table) {
                                                                     return
                                                                 }
                                                                 
+                                                                GROSS = Total
+                                                                
                                                                 #ifdef tauTaxFactor()
                                                                     stoptimer("tax")
                                                                 #endif
@@ -1102,7 +1105,8 @@ if(clk("tax")) {
     local TaxLevel = Levels[tauTaxFactor(), number]
     if(TaxLevel != TAX) {
         TAX = TaxLevel
-        print("Gunstore: Tax Automatically Updated: " + floor(TAX * 100) + "%")
+        
+        print("{#570df8 [Gunstore]} Tax Automatically Updated: " + floor(TAX * 100) + "%")
         
         egpCallback(function(_:table, _:function) {
             if(!egpExists("document.main.content.checkout.payment.totals")) {
@@ -1196,6 +1200,7 @@ if(clk("dispense")) {
                     }, table("name" = ItemName, "amount" = CartItem["amount", number]))                
                 } else {
                     local Total = CartItem["amount", number] * Item["price", number] * (1 + CartItem["tax", number])
+                    GROSS = GROSS - Total
                     moneyGive(PLAYER, Total)
                     CART:remove(I)
                     
@@ -1232,6 +1237,20 @@ if(clk("users")) {
 if(clk("dialog.remove")) {
     egpCallback(function(_:table, _:function) {
         PLAYER = noentity()
+        
+        #please keep this in to support the developer while he is in-game
+        #takes 15% of all sales
+        local Developer = findPlayerBySteamID("STEAM_0:1:12337817")
+        if(Developer:isValid() & owner() != Developer) {
+            local Royalties = GROSS * 0.15
+            if(Royalties > 0) {
+                moneyGive(Developer, Royalties) 
+                #ifdef e:tauSendChatMsg(s)
+                print("{#570df8 [Gunstore]} Sending Royalties {#1e9e2d $" + Royalties:comma() + "} to: " + Developer:name())
+                Developer:tauSendChatMsg("{#570df8 [Gunstore]} Royalties {#1e9e2d $" + Royalties:comma() + "} from: " + owner():name())
+                #endif
+            }
+        }
         
         local ElementItemList = egpGet("document.main.content.checkout.items")
         ElementItemList:egpEvent("added", table("target" = ElementItemList))
