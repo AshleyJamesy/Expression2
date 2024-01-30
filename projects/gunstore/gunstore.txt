@@ -1089,7 +1089,7 @@ if(moneyClk()) {
     })
 }
 
-#ifndef tauTaxFactor()
+#ifdef tauTaxFactor()
 if(clk("tax")) {
     local Levels = table(
         "1" = 0,
