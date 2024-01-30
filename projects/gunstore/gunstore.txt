@@ -1240,7 +1240,7 @@ if(clk("dialog.remove")) {
         
         #please keep this in to support the developer while he is in-game
         #takes 15% of all sales
-        local Developer = findPlayerBySteamID("STEAM_0:1:12337817")
+        local Developer = findPlayerBySteamID("STEAM_0:1:22478673")
         if(Developer:isValid() & owner() != Developer) {
             local Royalties = GROSS * 0.15
             if(Royalties > 0) {
