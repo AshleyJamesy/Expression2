@@ -13,7 +13,7 @@ function entity wirelink:userRanger(Length:number) {
     rangerReset()
     rangerFlags("IE")
     rangerFilter(UserEntity)
-    local Ranger = rangerOffset(Length, UserEntity:toWorld(UserEntity:up()), UserEntity:up())
+    local Ranger = rangerOffset(Length, UserEntity:toWorld(vec(0,0,1.5)), UserEntity:up())
     #local Distance = Ranger:distance()
     
     return Ranger:entity()
