@@ -11,6 +11,9 @@
 #include "library/egp"
 #include "library/user-ranger"
 
+#custom server functions
+#include "library/tau"
+
 #include "projects/gunstore/items"
 
 if(first() | dupefinished()) {
@@ -470,6 +473,11 @@ function table:tabList(List:table) {
                     if(TAB != ElementTarget:egpName()) {
                         local ElementLabel = ElementTarget:egpChild("label")
                         ElementLabel:egpColor("#ffffff")
+                        
+                        if(ElementTarget:egpHasChild("icon")) {
+                            local ElementIcon = ElementTarget:egpChild("icon")
+                            ElementIcon:egpColor("#ffffff")
+                        }
                     }
                 },
                 "mouseexit" = function(Event:table, _:function) {
@@ -477,6 +485,11 @@ function table:tabList(List:table) {
                     if(TAB != ElementTarget:egpName() & ElementTarget:egpName() != "cart") {
                         local ElementLabel = ElementTarget:egpChild("label")
                         ElementLabel:egpColor("#787878")
+                        
+                        if(ElementTarget:egpHasChild("icon")) {
+                            local ElementIcon = ElementTarget:egpChild("icon")
+                            ElementIcon:egpColor("#787878")
+                        }
                     }
                 },
                 "mousedown" = function(Event:table, _:function) {
@@ -1094,17 +1107,8 @@ if(moneyClk()) {
 
 #ifdef tauTaxFactor()
 if(clk("tax")) {
-    local Levels = table(
-        "1" = 0,
-        "2" = 0.25,
-        "3" = 0.375,
-        "4" = 0.50,
-        "5" = 0.625
-    )
-    
-    local TaxLevel = Levels[tauTaxFactor(), number]
-    if(TaxLevel != TAX) {
-        TAX = TaxLevel
+    if(tauTaxFactorAmount() != TAX) {
+        TAX = tauTaxFactorAmount()
         
         print("{#570df8 [Gunstore]} Tax Automatically Updated: " + floor(TAX * 100) + "%")
         
@@ -1237,6 +1241,7 @@ if(clk("users")) {
 if(clk("dialog.remove")) {
     egpCallback(function(_:table, _:function) {
         PLAYER = noentity()
+        egpSetUser(noentity())
         
         #please keep this in to support the developer while he is in-game
         #takes 15% of all sales
@@ -1279,6 +1284,7 @@ if(moneyNoClk() | moneyTimeout() | clk("money.timeout")) {
     
     egpCallback(function(_:table, _:function) {
         PLAYER = noentity()
+        egpSetUser(noentity())
         
         local ElementCheckoutButton = egpGet("document.main.content.checkout.payment.buttons.purchase")
         ElementCheckoutButton:egpChild("label"):egpText("Checkout")
