@@ -1,11 +1,77 @@
 @name library/cards
 @persist LIB_CARDS:table
 
+function number table:rank() {
+    #count bits
+    local CountBits = array(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+    local Counts = table()
+    foreach(_:number, Card:table = This) {
+        local Label = Card["label", string], Counts[Label, number] = Counts[Label, number] + 1
+    }
+    
+    foreach(_:number, Label:string = array("A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2")) {
+        local Count = min(Counts[Label, number], 4)
+        
+        for(I = 3, 0, -1) {
+            CountBits:pushNumber(I < Count)
+        }
+    }
+    local CountSum = 0
+    foreach(K:number, Bit:number = CountBits) {
+        CountSum = CountSum + (Bit * (2 ^ (CountBits:count() - K)))
+    }
+    
+    #value bits
+    local ValueBits = array(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+    foreach(_:number, Card:table = This) {
+        ValueBits[Card["value", number] == 1 ? 1 : abs(Card["value", number] - 15), number] = 1
+    }
+    local ValueSum = 0
+    foreach(K:number, Bit:number = ValueBits) {
+        ValueSum = ValueSum + (Bit * (2 ^ (ValueBits:count() - K)))
+    }
+    
+    #bit checking
+    local Modded = CountSum % 15
+    switch(Modded) {
+        case 1,
+            return 3 #Four Of A Kind
+        case 10,
+            return 4 #Full House
+        case 9,
+            return 7 #Three Of A Kind
+        case 7,
+            return 8 #Two Pair
+        case 6,
+            return 9 #One Pair
+    }
+    
+    #flush
+    local Flush = 1
+    for(I = 2, This:count()) {
+        if(This[I - 1, table]["suit", string] != This[I, table]["suit", string]) {
+            Flush = 0
+            break
+        }
+    }
+    
+    #straight
+    local Straight = ValueSum == 16444 | (ValueSum / (ValueSum && -ValueSum)) == 31
+    
+    if(Flush & ValueSum == 31744) { return 1 } #royal flush
+    if(Straight & Flush) { return 2 } #straight flush
+    if(Straight) { return 6 } #straight
+    if(Flush) { return 5 } #flush
+    if(Modded == 5) { return 10 } #high card
+    
+    return 0 #none
+}
+
 if(first() | dupefinished()) {
     LIB_CARDS = table()
-    foreach(_:number, Suit:string = array("SPADES", "CLUBS", "HEARTS", "DIAMONDS")) {
-        foreach(_:number, Value:string = array("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")) {
-            LIB_CARDS:pushTable(table( "suit" = Suit, "value" = Value ))
+    foreach(_:number, Suit:string = array("CLUB", "DIAMOND", "HEART", "SPADE")) {
+        foreach(Value:number, Label:string = array("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K")) {
+            LIB_CARDS:pushTable(table("suit" = Suit, "label" = Label, "value" = Value))
         }
     }
 }
