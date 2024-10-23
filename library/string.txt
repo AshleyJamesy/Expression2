@@ -1,12 +1,16 @@
 @name library/string
 
+#ifndef s:startsWith(s)
 function number string:startsWith(String:string) {
     return This:left(String:length()) == String
 }
+#endif
 
+#ifndef s:endsWith(s)
 function number string:endsWith(String:string) {
     return This:right(String:length()) == String
 }
+#endif
 
 function string string:comma() {
     local Match = 
