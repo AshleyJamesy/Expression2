@@ -1,6 +1,18 @@
 @name library/array
 
-function array array:indexOf(Target:number) {
+#[
+@function findClosest
+
+@description This function performs a binary search on an array to find the index of a target number. 
+             If the target is found, it returns the index; if not, it returns the closest index.
+
+@param Target (number) The number to search for in the array.
+
+@return array with two elements:
+    - The first element is `1` if the target is found, otherwise `0`.
+    - The second element is the index of either the target (if found) or the closest index.
+]#
+function array array:findClosest(Target:number) {
     if(This:count() == 0) {
         return array(0, 0)
     }
