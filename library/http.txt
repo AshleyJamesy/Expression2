@@ -8,119 +8,167 @@
     #error http library needs file extension enabled!
 #endif
 
+#PYTHON CODE:
 #[
-    import os, time
-    import re
-    import requests
-    import json
-    
-    def request(directory, filename):
-        filepath = os.path.join(directory, filename)
-        f = open(filepath)
-        data = json.load(f)
-        f.close()
-        os.remove(filepath)
-        
-        url = data["url"]
-        
-        response = None
-        match data["method"]:
-            case "GET":
-                print("GET: " + url)
-                response = requests.get(url)
-            case "POST":
-                print("POST: " + url)
-                print(data["headers"])
-                print(data["body"])
-                response = requests.post(url, data=data["body"], headers=data["headers"])
-        
-        if(response != None):
-            filepath = os.path.join(directory, re.sub("^(\d+)\.json$", "\\1-complete.json", filename))
-            with open(filepath, "w") as outfile:
-                json.dump(
-                    {
-                        "status": response.status_code,
-                        "reason": response.reason,
-                        "body": response.text
-                    }, outfile, indent=4)
-    
-    def run(directory):
-        for filename in os.listdir(directory):
-            filepath = os.path.join(directory, filename)
-            
-            if os.path.isfile(filepath):
-                if(re.search("^\d+\.json$", filename) != None):
-                    request(directory, filename)
-                
-                if(re.search("^\d+\-complete.json$", filename) != None):
-                    if(os.stat(filepath).st_size == 0):
-                        os.remove(filepath)
-    
-    while(1):
-        run("<PATH TO /garrysmod/data/e2files/requests/>")
-        time.sleep(1)
+import os, time
+import re
+import requests
+import json
+
+def request(directory, filename):
+	filepath = os.path.join(directory, filename)
+	f = open(filepath)
+	data = json.load(f)
+	f.close()
+	os.remove(filepath)
+	
+	url = data["url"]
+	
+	response = None
+	match data["method"]:
+		case "GET":
+			print("GET: " + url)
+			print(data["headers"])
+			response = requests.get(url, headers=data["headers"])
+		case "POST":
+			print("POST: " + url)
+			print(data["headers"])
+			print(data["body"])
+			response = requests.post(url, data=data["body"], headers=data["headers"])
+	
+	if(response != None):
+		filepath = os.path.join(directory, re.sub("^http\-requests\-(\d+)\.json$", "http-requests-\\1-complete.json", filename))
+		with open(filepath, "w") as outfile:
+			json.dump(
+				{
+					"status": response.status_code,
+					"reason": response.reason,
+					"body": response.text
+				}, outfile, indent=4)
+
+def run(directory):
+	for filename in os.listdir(directory):
+		filepath = os.path.join(directory, filename)
+		
+		if os.path.isfile(filepath):
+			if(re.search("^http\-requests\-\d+\.json$", filename) != None):
+				request(directory, filename)
+			
+			if(re.search("^http\-requests\-\d+\-complete.json$", filename) != None):
+				if(os.stat(filepath).st_size == 1):
+					os.remove(filepath)
+
+while(1):
+	run("<PATH TO /garrysmod/data/e2files/requests/>")
+	time.sleep(1)
 ]#
 
 @persist LIB_HTTP:table
 
-if(first() | dupefinished()) {
-    runOnFile(1)
-    
+if(first() | dupefinished()) { 
     LIB_HTTP = table(
-        "queue" = table(),
+        "id" = 0,
+        "requests" = table(
+            "outgoing" = table(),
+            "incoming" = table()
+        ),
         "clk" = 0,
         "clkname" = "",
-        "clkdata" = table()
+        "clkdata" = ""
     )
 }
 
-function void httpRequest(Name:string, Type:string, Url:string, Headers:table, Body:string) {
-    local Queue = LIB_HTTP["queue", table]
-    Queue:pushTable(table(
-        "name" = Name,
-        "url" = Url,
-        "method" = Type:upper(),
-        "headers" = Headers,
-        "body" = Body
+function void httpRequest(Type:string, Url:string, Headers:table, Body:string, Callback:function) {
+    local Id = LIB_HTTP["id", number]
+    LIB_HTTP["id", number] = Id + 1
+    
+    local Outgoing = LIB_HTTP["requests", table]["outgoing", table]
+    
+    Outgoing:pushTable(table(
+        "id" = Id,
+        "callback" = Callback,
+        "request" = table(
+            "url" = Url,
+            "method" = Type:upper(),
+            "headers" = Headers,
+            "body" = Body
+        )
     ))
-    timer("library.http.queue", 0)
+    
+    timer("library.http.request", 0)
 }
 
-function void httpRequest(Name:string, Type:string, Url:string, Headers:table) {
-    httpRequest(Name, Type, Url, Headers, "")
+function void httpRequest(Type:string, Url:string, Headers:table, Callback:function) {
+    httpRequest(Type, Url, Headers, "", Callback)
 }
 
-function number httpClk() {
-    return LIB_HTTP["clk", number]
+function void httpRequest(Type:string, Url:string, Callback:function) {
+    httpRequest(Type, Url, table(), "", Callback)
 }
 
-LIB_HTTP["clk", number] = 0
-LIB_HTTP["clkname", string] = ""
-LIB_HTTP["clkdata", string] = ""
-
-if(clk("library.http.queue")) {
-    local Queue = LIB_HTTP["queue", table]
-    if(Queue:count() > 0) {
-        if(fileCanWrite()) {
-            fileWrite("http-requests-", jsonEncode(Queue, 1))
+if(clk("library.http.request")) {
+    local Incoming = LIB_HTTP["requests", table]["incoming", table]
+    if(Incoming:count() > 0) {
+        if(fileCanLoad()) {
+            local Request = Incoming[1, table]
+            fileLoad("requests/http-requests-" + Request["id", number] + "-complete.json")
         } else {
-            timer("library.http.queue", 1000) #can't write file now, try again in 1s
+            timer("library.http.request", 1) #can't load file now, try again later
         }
     }
+    
+    local Outgoing = LIB_HTTP["requests", table]["outgoing", table]
+    if(Outgoing:count() > 0) {
+        if(fileCanWrite()) {
+            local Request = Outgoing:removeTable(1)
+            fileWrite("requests/http-requests-" + Request["id", number] + ".json", jsonEncode(Request["request", table], 1))
+            Incoming:pushTable(Request)
+        } else {
+            timer("library.http.request", 1) #can't write file now, try again later
+        }
+    }
+    
+    if(Incoming:count() > 0) {
+        timer("library.http.request", 1) #can't write file now, try again later
+    }
 }
 
-if(fileClk()) {
-    switch(fileStatus()) {
-        case _FILE_OK,
-            fileWrite(fileName(), "") #zero bytes, python will remove it
-        break
-        case _FILE_404,
-        case _FILE_TIMEOUT,
-        case _FILE_TRANSFER_ERROR,
-        case _FILE_UNKNOWN,
-            
-        break
-        default,
-        break
+function void httpRequestOutgoing(FilePath:string) {
+    local Outgoing = LIB_HTTP["requests", table]["outgoing", table]
+    
+    local Index = 0
+    foreach(K:number, Request:table = Outgoing) {
+        if("requests/http-requests-" + Request["id", number] + ".json" == FilePath) {
+            Index = K
+            break
+        }
     }
+    
+    if(Index == 0) {
+        return
+    }
+    
+    Outgoing:remove(Index)
+}
+
+function void httpRequestIncoming(FilePath:string, Data:string) {
+    local Incoming = LIB_HTTP["requests", table]["incoming", table]
+    
+    local Index = 0
+    foreach(K:number, Request:table = Incoming) {
+        if("requests/http-requests-" + Request["id", number] + "-complete.json" == FilePath) {
+            Index = K
+            break
+        }
+    }
+    
+    if(Index == 0) {
+        return
+    }
+    
+    local Request = Incoming:removeTable(Index)
+    
+    fileWrite(FilePath, "0") #one byte, python will remove it
+    
+    Request["callback", function](Request["request", table], Data)
 }
