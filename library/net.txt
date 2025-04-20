@@ -18,6 +18,10 @@ if(first() | dupefinished()) {
     )
 }
 
+function entity netServerEntity() {
+    return LIB_NET["server", entity]
+}
+
 function void netState(Message:string, Callback:function) {
     if(LIB_NET["type", string] == "none") {
         return
