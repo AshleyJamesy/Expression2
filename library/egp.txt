@@ -1119,6 +1119,7 @@ function void table:egpDraw() {
     }
     
     #ORDERING
+    #experimental, make this optional?
     #[
     if(This:egpHasParent()) {
         local ChildId = -1
@@ -1133,7 +1134,6 @@ function void table:egpDraw() {
         }
     }
     ]#
-    #TODO: custom order
     
     #PATH & NAME
     local Name = Properties["name", string]
@@ -1232,17 +1232,15 @@ function void table:egpDraw() {
     #FONT:
     local Font = Properties["font", table]
     local FontTypeIds = Font:typeids()
+    local FontSize = 18
     if(FontTypeIds:exists("size")) {
         if(FontTypeIds["size", string] == "n") {
-            This:egpFont(Font["font", string], Font["size", number])
+            FontSize = Font["size", number]
         } elseif(FontTypeIds["size", string] == "s") {
-            This:egpFont(Font["font", string], egpPixels(Font["size", string], This:egpSize():y()))
-        } else {
-            This:egpFont(Font["font", string], 18)
+            FontSize = egpPixels(Font["size", string], This:egpSize():y())
         }
-    } else {
-        This:egpFont(Font["font", string], 18)
     }
+    This:egpFont(Font["font", string], FontSize)
     
     #COLOUR:
     if(TypeIds:exists("color")) {
@@ -1260,7 +1258,21 @@ function void table:egpDraw() {
     }
 }
 
-#TODO: stopPropogation
+function number table:egpFontSize() {
+    local Properties = This["properties", table]
+    local Font = Properties["font", table]
+    local FontTypeIds = Font:typeids()
+    local FontSize = 18
+    if(FontTypeIds:exists("size")) {
+        if(FontTypeIds["size", string] == "n") {
+            FontSize = Font["size", number]
+        } elseif(FontTypeIds["size", string] == "s") {
+            FontSize = egpPixels(Font["size", string], This:egpSize():y())
+        }
+    }
+    return FontSize
+}
+
 function table:egpEvent(Name:string, Event:table, Bubble:number) {
     local Properties = This["properties", table]
     local Events = Properties["events", table]
@@ -1303,6 +1315,27 @@ function table:egpEvent(Name:string, Event:table) {
     This:egpEvent(Name, Event, 0)
 }
 
+function void table:egpAddEventListener(Name:string, Callback:function) {
+    local Properties = This["properties", table]
+    if(!Properties:exists("events")) {
+        Properties["events", table] = table()
+    }
+    
+    local Events = Properties["events", table]
+    if(!Events:exists(Name)) {
+        Events["name", function] = Callback
+    }
+    
+    local TypeId = Events:typeids()
+    if(TypeId[Name, string] == "f") {
+        Events["name", table] = table(
+            Events["name", function]
+        )
+    }
+    
+    Events["name", table]:pushFunction(Callback)
+}
+
 # =============================== OBJECT DRWAING: ADD ===============================
 function void table:egpAdd(Properties:table, Hide:number, Callback:function, AddEvent:table) {
     egpCallback(function(Event:table, _:function) {
@@ -1329,7 +1362,8 @@ function void table:egpAdd(Properties:table, Hide:number, Callback:function, Add
                 "name" = table(),
                 "index" = table()
             ),
-            "properties" = Properties
+            "properties" = Properties,
+            "data" = table()
         )
         Children:pushTable(Target)
         Target:egpDraw()
@@ -1343,6 +1377,11 @@ function void table:egpAdd(Properties:table, Hide:number, Callback:function, Add
         #item
         if(Properties:exists("item")) {
             Target["item", table] = Properties:removeTable("item")
+        }
+        
+        #data
+        if(Properties:exists("data")) {
+            Target["data", table] = Properties:removeTable("data")
         }
         
         #queue children
@@ -1465,6 +1504,22 @@ function table:egpRemoveChildren() {
     for(I = Children:count(), 1, -1) {
         Children[I, table]:egpRemove()
     }
+}
+
+function void table:egpData(Name:string, Value:number) {
+    This["data", table][Name, number] = Value
+}
+
+function number table:egpDataNumber(Name:string) {
+    return This["data", table][Name, number]
+}
+
+function void table:egpData(Name:string, Value:string) {
+    This["data", table][Name, string] = Value
+}
+
+function string table:egpDataString(Name:string) {
+    return This["data", table][Name, string]
 }
 
 function table:egpList(List:table, Start:number, Max:number, Spacing:number, Vertical:number, Hide:number, Callback:function) {
@@ -1688,6 +1743,100 @@ function table:egpScrollableList(List:table, Max:number, Spacing:number, Style:t
     ElementConatiner:egpList(List, 1, Max, Spacing, 1, Hide, Callback)
 }
 
+function table:egpScrollableList(List:table, Start:number, Max:number, Spacing:number, Style:table, Hide:number, Callback:function) {
+    local ThumbSize = Max / List:count()
+    
+    local MouseDownEvent = function(Event:table, _:function) {
+        if(List:count() <= Max) {
+            return
+        }
+        
+        local Position = Event["position", vector2]
+        
+        local ElementTarget = Event["target", table]
+        local ElementTargetPosition = ElementTarget:egpGlobalPos()
+        local ElementTargetSize = ElementTarget:egpSize()
+        local ElementButton = ElementTarget:egpChild("thumb")
+        
+        local Normal = (Position:y() - ElementTargetPosition:y()) / ElementTargetSize:y()
+        
+        local Y = min(1 - ThumbSize, max(0, Normal - ThumbSize * 0.5))
+        local Start = floor((Y / (1 - ThumbSize)) * (List:count() - Max)) + 1
+        
+        ElementButton:egpPos(table("x" = "50%", "y" = format("%0.2f%%", Y * 100)))
+        ElementTarget:egpParent():egpChild("container"):egpList(List, Start, Max, Spacing, 1, 0, Callback)
+    }
+    
+    if(!This:egpHasChild("container") & !This:egpHasChild("track")) {
+        This:egpRemoveChildren()
+        
+        This:egpAdd(table(
+            "name" = "container",
+            "anchor" = table("x" = "0%", "y" = "0%"),
+            "position" = table("x" = "0%", "y" = "0%"),
+            "size" = table("width" = "92%", "height" = "100%"),
+            "events" = table(
+                "added" = function(Event:table, _:function) {
+                    Event["target", table]:egpList(List, 1, Max, Spacing, Callback)
+                }
+            )
+        ))
+        
+        This:egpAdd(table(
+            "name" = "track",
+            "anchor" = table("x" = "100%", "y" = "0%"),
+            "position" = table("x" = "100%", "y" = "0%"),
+            "size" = table("width" = "6%", "height" = "100%"),
+            "color" = Style["background", string],
+            "rounded" = Style["rounded", number],
+            "children" = table(
+                table(
+                    "name" = "thumb",
+                    "anchor" = table("x" = "50%", "y" = "0%"),
+                    "position" = table("x" = "50%", "y" = "0%"),
+                    "size" = table("width" = "100%", "height" = "100%"),
+                    "rounded" = Style["rounded", number],
+                    "outline" = Style["outline", number],
+                    "mouse-events" = "none",
+                    "events" = table(
+                        "added" = function(Event:table, _:function) {
+                            if(List:count() > Max) {
+                                Event["target", table]:egpSize(table("width" = "100%", "height" = format("%0.2f%%", ThumbSize * 100)))
+                                Event["target", table]:egpColor(Style["button", table]["active", string])
+                            } else {
+                                Event["target", table]:egpSize(table("width" = "100%", "height" = "100%"))
+                                Event["target", table]:egpColor(Style["button", table]["disabled", string])
+                            }
+                        }
+                    )
+                )
+            ),
+            "events" = table(
+                "mousedown" = MouseDownEvent
+            )
+        ))
+        
+        return
+    }
+    
+    local ElementScroll = This:egpChild("track")
+    ElementScroll["properties", table]["events", table]["mousedown", function] = MouseDownEvent
+    
+    local ElementScrollButton = ElementScroll:egpChild("thumb")
+    local ThumbPositionY = (Start - 1) / (List:count() - Max) * (1 - ThumbSize)
+    if(List:count() > Max) {
+        ElementScrollButton:egpSize(table("width" = "100%", "height" = format("%0.2f%%", ThumbSize * 100)))
+        ElementScrollButton:egpPos(table("x" = "50%", "y" = format("%0.2f%%", ThumbPositionY * 100)))
+        ElementScrollButton:egpColor(Style["button", table]["active", string])
+    } else {
+        ElementScrollButton:egpSize(table("width" = "100%", "height" = "100%"))
+        ElementScrollButton:egpColor(Style["button", table]["disabled", string])
+    }
+    
+    local ElementConatiner = This:egpChild("container")
+    ElementConatiner:egpList(List, 1, Max, Spacing, 1, Hide, Callback)
+}
+
 function void egpWhitelistUser(Player:entity) {
     LIB_EGP["data", table]["whitelist", table][Player:steamID(), number] = 1
 }
@@ -1710,41 +1859,45 @@ function void table:egpAnimate(Callback:function) {
     timer("library.egp.animate", 0)
 }
 
-if(LIB_EGP["input", number] == 1) {
-    if(egpUserChanged()) {
-        egpCallback(function(Event:table, Callback:function) {
-            local Target = Event["target", table]
-            local User = Event["user", entity]
-            local Position = Event["position", vector2]
-            local GlobalPos = Event["globalpos", vector2] #temporary fix as globalpos is bugged: https://github.com/wiremod/wire/issues/2949
-            
-            local SteamId = User:steamID()
-            local Whitelist = LIB_EGP["data", table]["whitelist", table]
-            local Blacklist = LIB_EGP["data", table]["blacklist", table]
-            local Allowed = Blacklist:exists(SteamId) ? 0 : Whitelist:count() > 0 & !Whitelist:exists(SteamId) ? 0 : 1
-            
-            if(!Allowed) {
-                return
-            }
-            
-            local Children = Target:egpChildren()
-            if(Children:count() > 0) {
-                for(I = Children:count(), 1, -1) {
-                    local Child = Children[I, table]
-                    local Object = Child["object", egpobject]
-                    local Contains = inrange(Position, GlobalPos + Object:getPos(), GlobalPos + Object:getPos() + Object:getSize())
-                    if(Child["properties", table]["mouse-events", string] == "none") {
-                        Contains = 0
-                    }
-                    if(Contains) {
-                        egpCallback(Callback, table("target" = Child, "user" = User, "position" = Position, "globalpos" = GlobalPos + Object:getPos()), LIB_EGP["index", number], 0)
-                        return
-                    }
+function void egpMouseEvent(User:entity, Position:vector2) {
+    egpCallback(function(Event:table, Callback:function) {
+        local Target = Event["target", table]
+        local User = Event["user", entity]
+        local Position = Event["position", vector2]
+        local GlobalPos = Event["globalpos", vector2] #temporary fix as globalpos is bugged: https://github.com/wiremod/wire/issues/2949
+        
+        local SteamId = User:steamID()
+        local Whitelist = LIB_EGP["data", table]["whitelist", table]
+        local Blacklist = LIB_EGP["data", table]["blacklist", table]
+        local Allowed = Blacklist:exists(SteamId) ? 0 : Whitelist:count() > 0 & !Whitelist:exists(SteamId) ? 0 : 1
+        
+        if(!Allowed) {
+            return
+        }
+        
+        local Children = Target:egpChildren()
+        if(Children:count() > 0) {
+            for(I = Children:count(), 1, -1) {
+                local Child = Children[I, table]
+                local Object = Child["object", egpobject]
+                local Contains = inrange(Position, GlobalPos + Object:getPos(), GlobalPos + Object:getPos() + Object:getSize())
+                if(Child["properties", table]["mouse-events", string] == "none") {
+                    Contains = 0
+                }
+                if(Contains) {
+                    egpCallback(Callback, table("target" = Child, "user" = User, "position" = Position, "globalpos" = GlobalPos + Object:getPos()), LIB_EGP["index", number], 0)
+                    return
                 }
             }
-            
-            Target:egpEvent("mousedown", table("target" = Target, "user" = User, "position" = Position), 1)
-        }, table("target" = egpDocument(), "user" = egpUser(), "position" = egpWirelink():egpCursor(egpUser()), "globalpos" = vec2(0,0)), 1, 0)
+        }
+        
+        Target:egpEvent("mousedown", table("target" = Target, "user" = User, "position" = Position), 1)
+    }, table("target" = egpDocument(), "user" = User, "position" = Position, "globalpos" = vec2(0,0)), 1, 0)
+}
+
+if(LIB_EGP["input", number] == 1) {
+    if(egpUserChanged()) {
+        egpMouseEvent(egpUser(), egpWirelink():egpCursor(egpUser()))
     }
     
     if(clk("library.egp.mouseover")) {
@@ -1794,7 +1947,7 @@ if(LIB_EGP["input", number] == 1) {
 
 if(clk("library.egp.clk")) {
     local Queue = LIB_EGP["queue", table]
-    while(Queue:count() > 0 && perf(85)) {
+    while(Queue:count() > 0 && perf(90)) {
         local Event = Queue:popTable()
         local Type = Event["type", string]
         
