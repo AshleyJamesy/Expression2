@@ -152,6 +152,8 @@ function void timer(Name:string, Delay:number, Data:wirelink) {
     }
 }
 
+#ifndef timer(s,n,f)
+#warning "A"
 function void timer(Name:string, Delay:number, Data:function) {
     local Timers = invert(getTimers())
     if(!Timers:exists(Name)) {
@@ -159,6 +161,7 @@ function void timer(Name:string, Delay:number, Data:function) {
         timer(Name, Delay)
     }
 }
+#endif
 
 function string timerGetType() {
     return (clkName() != "" || clk("")) ? LIB_TIMER["data", table]:typeids()["data", string] : ""
@@ -192,9 +195,11 @@ function complex timerGetComplex() {
     #endif
 #endif
 
+#ifndef timer(s,n,f)
 function function timerGetFunction() {
     return ((clkName() != "" || clk("")) && timerGetType() == "f") ? LIB_TIMER["data", table]["data", function] : function() {}
 }
+#endif
 
 function matrix timerGetMatrix() {
     return ((clkName() != "" || clk("")) && timerGetType() == "m") ? LIB_TIMER["data", table]["data", matrix] : matrix()
