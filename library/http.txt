@@ -78,7 +78,7 @@ if(first() | dupefinished()) {
     )
 }
 
-function void httpRequest(Type:string, Url:string, Headers:table, Body:string, Callback:function) {
+function void httpRequest(Type:string, Url:string, Body:string, Headers:table, Callback:function) {
     local Id = LIB_HTTP["id", number]
     LIB_HTTP["id", number] = Id + 1
     
@@ -99,11 +99,15 @@ function void httpRequest(Type:string, Url:string, Headers:table, Body:string, C
 }
 
 function void httpRequest(Type:string, Url:string, Headers:table, Callback:function) {
-    httpRequest(Type, Url, Headers, "", Callback)
+    httpRequest(Type, Url, "", Headers, Callback)
+}
+
+function void httpRequest(Type:string, Url:string, Body:string, Callback:function) {
+    httpRequest(Type, Url, Body, table(), Callback)
 }
 
 function void httpRequest(Type:string, Url:string, Callback:function) {
-    httpRequest(Type, Url, table(), "", Callback)
+    httpRequest(Type, Url, "", table(), Callback)
 }
 
 if(clk("library.http.request")) {
