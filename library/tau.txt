@@ -1,6 +1,6 @@
 @name library/tau
 
-#ifdef tauSendChatMsg(s)
+#ifdef e:tauSendChatMsg(s)
 function entity:tauSendPrivateMessage(String:string) {
     if(!This:isValid()) {
         return
