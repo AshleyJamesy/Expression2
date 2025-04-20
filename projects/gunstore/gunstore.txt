@@ -15,7 +15,6 @@
 #include "library/tau"
 
 #include "projects/gunstore/items"
-#include "sound"
 
 if(first() | dupefinished()) {
     CATEGORIES = sStoreCategories()
