@@ -68,12 +68,60 @@ function number table:rank() {
 }
 
 if(first() | dupefinished()) {
-    LIB_CARDS = table()
-    foreach(_:number, Suit:string = array("CLUB", "DIAMOND", "HEART", "SPADE")) {
-        foreach(Value:number, Label:string = array("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K")) {
-            LIB_CARDS:pushTable(table("suit" = Suit, "label" = Label, "value" = Value))
-        }
-    }
+    LIB_CARDS = table(
+        table("suit" = "CLUB", "label" = "A", "value" = 1),
+        table("suit" = "CLUB", "label" = "2", "value" = 2),
+        table("suit" = "CLUB", "label" = "3", "value" = 3),
+        table("suit" = "CLUB", "label" = "4", "value" = 4),
+        table("suit" = "CLUB", "label" = "5", "value" = 5),
+        table("suit" = "CLUB", "label" = "6", "value" = 6),
+        table("suit" = "CLUB", "label" = "7", "value" = 7),
+        table("suit" = "CLUB", "label" = "8", "value" = 8),
+        table("suit" = "CLUB", "label" = "9", "value" = 9),
+        table("suit" = "CLUB", "label" = "10", "value" = 10),
+        table("suit" = "CLUB", "label" = "J", "value" = 11),
+        table("suit" = "CLUB", "label" = "Q", "value" = 12),
+        table("suit" = "CLUB", "label" = "K", "value" = 13),
+        table("suit" = "DIAMOND", "label" = "A", "value" = 1),
+        table("suit" = "DIAMOND", "label" = "2", "value" = 2),
+        table("suit" = "DIAMOND", "label" = "3", "value" = 3),
+        table("suit" = "DIAMOND", "label" = "4", "value" = 4),
+        table("suit" = "DIAMOND", "label" = "5", "value" = 5),
+        table("suit" = "DIAMOND", "label" = "6", "value" = 6),
+        table("suit" = "DIAMOND", "label" = "7", "value" = 7),
+        table("suit" = "DIAMOND", "label" = "8", "value" = 8),
+        table("suit" = "DIAMOND", "label" = "9", "value" = 9),
+        table("suit" = "DIAMOND", "label" = "10", "value" = 10),
+        table("suit" = "DIAMOND", "label" = "J", "value" = 11),
+        table("suit" = "DIAMOND", "label" = "Q", "value" = 12),
+        table("suit" = "DIAMOND", "label" = "K", "value" = 13),
+        table("suit" = "HEART", "label" = "A", "value" = 1),
+        table("suit" = "HEART", "label" = "2", "value" = 2),
+        table("suit" = "HEART", "label" = "3", "value" = 3),
+        table("suit" = "HEART", "label" = "4", "value" = 4),
+        table("suit" = "HEART", "label" = "5", "value" = 5),
+        table("suit" = "HEART", "label" = "6", "value" = 6),
+        table("suit" = "HEART", "label" = "7", "value" = 7),
+        table("suit" = "HEART", "label" = "8", "value" = 8),
+        table("suit" = "HEART", "label" = "9", "value" = 9),
+        table("suit" = "HEART", "label" = "10", "value" = 10),
+        table("suit" = "HEART", "label" = "J", "value" = 11),
+        table("suit" = "HEART", "label" = "Q", "value" = 12),
+        table("suit" = "HEART", "label" = "K", "value" = 13),
+        table("suit" = "SPADE", "label" = "A", "value" = 1),
+        table("suit" = "SPADE", "label" = "2", "value" = 2),
+        table("suit" = "SPADE", "label" = "3", "value" = 3),
+        table("suit" = "SPADE", "label" = "4", "value" = 4),
+        table("suit" = "SPADE", "label" = "5", "value" = 5),
+        table("suit" = "SPADE", "label" = "6", "value" = 6),
+        table("suit" = "SPADE", "label" = "7", "value" = 7),
+        table("suit" = "SPADE", "label" = "8", "value" = 8),
+        table("suit" = "SPADE", "label" = "9", "value" = 9),
+        table("suit" = "SPADE", "label" = "10", "value" = 10),
+        table("suit" = "SPADE", "label" = "J", "value" = 11),
+        table("suit" = "SPADE", "label" = "Q", "value" = 12),
+        table("suit" = "SPADE", "label" = "K", "value" = 13)
+    )
 }
 
 function table cards() {
