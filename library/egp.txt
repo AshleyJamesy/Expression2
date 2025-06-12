@@ -681,7 +681,7 @@ function void table:egpColor(Color:vector) {
     This:egpColor(vec4(Color,255))
 }
 
-# ================
+# =============================== OBJECT PROPERTIES: ANGLE =============================== 
 
 function void table:egpAngle(Angle:number) {
     local Id = This:egpId()
@@ -693,6 +693,10 @@ function void table:egpAngle(Angle:number) {
         "id" = Id,
         "angle" = Angle
     ))
+}
+
+function number table:egpAngle() {
+    return EGP_SCREEN:egpAngle(This:egpId())
 }
 
 # =============================== OBJECT PROPERTIES: OUTLINE =============================== 
