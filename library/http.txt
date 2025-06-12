@@ -37,7 +37,7 @@ def request(directory, filename):
 			response = requests.post(url, data=data["body"], headers=data["headers"])
 	
 	if(response != None):
-		filepath = os.path.join(directory, re.sub("^http\-requests\-(\d+)\.json$", "http-requests-\\1-complete.json", filename))
+		filepath = os.path.join(directory, re.sub(r"^http\-requests\-(\d+)\.json$", "http-requests-\\1-complete.json", filename))
 		with open(filepath, "w") as outfile:
 			json.dump(
 				{
@@ -51,15 +51,15 @@ def run(directory):
 		filepath = os.path.join(directory, filename)
 		
 		if os.path.isfile(filepath):
-			if(re.search("^http\-requests\-\d+\.json$", filename) != None):
+			if(re.search(r"^http\-requests\-\d+\.json$", filename) != None):
 				request(directory, filename)
 			
-			if(re.search("^http\-requests\-\d+\-complete.json$", filename) != None):
+			if(re.search(r"^http\-requests\-\d+\-complete.json$", filename) != None):
 				if(os.stat(filepath).st_size == 1):
 					os.remove(filepath)
 
 while(1):
-	run("<PATH TO /garrysmod/data/e2files/requests/>")
+	run("PATH TO /garrysmod/data/e2files/requests/>")
 	time.sleep(1)
 ]#
 
@@ -137,6 +137,7 @@ if(clk("library.http.request")) {
     }
 }
 
+#call this in fileWritten event
 function void httpRequestOutgoing(FilePath:string) {
     local Outgoing = LIB_HTTP["requests", table]["outgoing", table]
     
@@ -155,6 +156,7 @@ function void httpRequestOutgoing(FilePath:string) {
     Outgoing:remove(Index)
 }
 
+#call this in fileLoaded event
 function void httpRequestIncoming(FilePath:string, Data:string) {
     local Incoming = LIB_HTTP["requests", table]["incoming", table]
     
